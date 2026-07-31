@@ -1,0 +1,25 @@
+-- Indexes
+create index if not exists idx_users_deleted_at on public.users (deleted_at);
+create index if not exists idx_users_is_active on public.users (is_active);
+create index if not exists idx_profiles_user_id on public.profiles (user_id);
+create index if not exists idx_profiles_deleted_at on public.profiles (deleted_at);
+create index if not exists idx_agencies_owner_id on public.agencies (owner_id);
+create index if not exists idx_agencies_deleted_at on public.agencies (deleted_at);
+create index if not exists idx_agency_members_agency_id on public.agency_members (agency_id);
+create index if not exists idx_agency_members_user_id on public.agency_members (user_id);
+create index if not exists idx_properties_owner_id on public.properties (owner_id);
+create index if not exists idx_properties_agency_id on public.properties (agency_id);
+create index if not exists idx_properties_public_deleted on public.properties (is_public, deleted_at);
+create index if not exists idx_properties_city on public.properties (city);
+create index if not exists idx_properties_listing_type on public.properties (listing_type);
+create index if not exists idx_property_images_property_id on public.property_images (property_id);
+create index if not exists idx_property_images_primary on public.property_images (is_primary, deleted_at);
+create index if not exists idx_property_features_property_id on public.property_features (property_id);
+create index if not exists idx_favorites_user_id on public.favorites (user_id);
+create index if not exists idx_favorites_property_id on public.favorites (property_id);
+create index if not exists idx_property_views_property_id on public.property_views (property_id);
+create index if not exists idx_conversations_buyer_id on public.conversations (buyer_id);
+create index if not exists idx_conversations_seller_id on public.conversations (seller_id);
+create index if not exists idx_messages_conversation_id on public.messages (conversation_id);
+create index if not exists idx_notifications_user_id on public.notifications (user_id);
+create index if not exists idx_notifications_unread on public.notifications (user_id, is_read);
