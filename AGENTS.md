@@ -365,3 +365,40 @@ Remaining issues, or None.
 
 NEXT:
 Next task only. Do not begin it automatically.
+## İkiMetr mandatory project skills
+
+Before implementing any coding task, use:
+
+- `ikimetr-task-guard`
+
+For any security-sensitive task, additionally use:
+
+- `ikimetr-security-review`
+
+Security-sensitive tasks include:
+
+- authentication;
+- authorization;
+- permissions;
+- owner/client contact access;
+- admin functionality;
+- uploads;
+- ingestion of external content;
+- secrets;
+- audit/security logging;
+- destructive migrations;
+- AI actions affecting privileged state.
+
+These project skills supplement, but do not replace:
+
+- `AGENTS.md`;
+- the active task specification;
+- `PROJECT_CONSTITUTION`;
+- security rules;
+- ADR decisions.
+
+If a skill conflicts with the active task specification, project constitution, security rules, or an ADR:
+
+STOP and report the conflict.
+
+Do not guess and do not silently redesign the system.
