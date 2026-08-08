@@ -1,0 +1,19 @@
+{
+  "name": "@ikimetr/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ikimetr/database": "workspace:*",
+    "@ikimetr/shared": "workspace:*",
+    "@ikimetr/validation": "workspace:*",
+    "fastify": "5.11.3",
+    "redis": "6.2.0"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@ikimetr/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx watch src/worker.ts",
+    "start": "node dist/worker.js",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ikimetr/validation": "workspace:*",
+    "redis": "6.2.0"
+  }
+}

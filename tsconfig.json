@@ -1,0 +1,4 @@
+{
+  "extends": "@ikimetr/config/tsconfig/base.json",
+  "files": []
+}

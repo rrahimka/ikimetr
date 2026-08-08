@@ -1,0 +1,8 @@
+{
+  "extends": "@ikimetr/config/tsconfig/library.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "src"
+  },
+  "include": ["src/**/*.ts"]
+}

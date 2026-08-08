@@ -1,0 +1,14 @@
+.agents/
+.claude/
+.git/
+.serena/
+AGENTS.md
+.next/
+coverage/
+dist/
+node_modules/
+apps/web/next-env.d.ts
+docs/
+specs/
+IKIMETR_ARCHITECTURE_V1.1_MASTER.md
+pnpm-lock.yaml

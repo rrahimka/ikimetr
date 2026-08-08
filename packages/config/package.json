@@ -1,0 +1,19 @@
+{
+  "name": "@ikimetr/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./eslint": "./eslint.config.js",
+    "./tsconfig/*": "./typescript/*"
+  },
+  "dependencies": {
+    "@eslint/js": "10.0.1",
+    "globals": "17.9.0",
+    "typescript-eslint": "8.66.0"
+  },
+  "peerDependencies": {
+    "eslint": "^10.0.0",
+    "typescript": ">=5.9.0 <6.1.0"
+  }
+}

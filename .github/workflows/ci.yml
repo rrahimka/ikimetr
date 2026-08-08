@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_DB: ikimetr
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_USER: ikimetr
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ikimetr -d ikimetr"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:8.2.1-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://ikimetr:ci-only-password@127.0.0.1:5432/ikimetr
+      REDIS_URL: redis://127.0.0.1:6379
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.34.5 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Run unit tests
+        run: pnpm test:unit
+
+      - name: Validate Docker Compose
+        run: pnpm compose:config
+
+      - name: Run integration tests
+        run: pnpm test:integration
+
+      - name: Build production artifacts
+        run: pnpm build
+
+      - name: Audit production dependencies
+        run: pnpm audit:prod
