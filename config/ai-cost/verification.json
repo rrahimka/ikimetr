@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "configVersion": "1.0.0",
+  "allowModelCommands": false,
+  "commands": {
+    "lint": {
+      "enabled": true,
+      "executable": "pnpm",
+      "args": ["lint"],
+      "optional": false
+    },
+    "typecheck": {
+      "enabled": true,
+      "executable": "pnpm",
+      "args": ["typecheck"],
+      "optional": false
+    },
+    "unit": {
+      "enabled": true,
+      "executable": "pnpm",
+      "args": ["test:unit"],
+      "optional": false
+    },
+    "integration": {
+      "enabled": true,
+      "executable": "pnpm",
+      "args": ["test:integration"],
+      "optional": false
+    },
+    "build": {
+      "enabled": true,
+      "executable": "pnpm",
+      "args": ["build"],
+      "optional": false
+    },
+    "playwright": {
+      "enabled": false,
+      "executable": null,
+      "args": [],
+      "optional": true
+    }
+  },
+  "pipeline": ["lint", "typecheck", "unit", "integration", "build"],
+  "optionalStages": ["playwright"]
+}

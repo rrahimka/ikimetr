@@ -109,6 +109,12 @@ importers:
 
   packages/shared: {}
 
+  packages/ai-cost-system:
+    dependencies:
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+
   packages/validation:
     dependencies:
       zod:

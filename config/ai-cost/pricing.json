@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "configVersion": "1.0.0",
+  "pricingVersion": "bootstrap-unknown-1",
+  "snapshots": [
+    {
+      "provider": "local-ai",
+      "model": null,
+      "currency": null,
+      "inputRatePerMillionTokens": null,
+      "outputRatePerMillionTokens": null,
+      "cacheReadRatePerMillionTokens": null,
+      "cacheWriteRatePerMillionTokens": null,
+      "effectiveAt": null,
+      "retrievedAt": null,
+      "source": null,
+      "status": "unknown"
+    },
+    {
+      "provider": "deepseek",
+      "model": null,
+      "currency": null,
+      "inputRatePerMillionTokens": null,
+      "outputRatePerMillionTokens": null,
+      "cacheReadRatePerMillionTokens": null,
+      "cacheWriteRatePerMillionTokens": null,
+      "effectiveAt": null,
+      "retrievedAt": null,
+      "source": null,
+      "status": "unknown"
+    },
+    {
+      "provider": "qwen",
+      "model": null,
+      "currency": null,
+      "inputRatePerMillionTokens": null,
+      "outputRatePerMillionTokens": null,
+      "cacheReadRatePerMillionTokens": null,
+      "cacheWriteRatePerMillionTokens": null,
+      "effectiveAt": null,
+      "retrievedAt": null,
+      "source": null,
+      "status": "unknown"
+    },
+    {
+      "provider": "codex",
+      "model": null,
+      "currency": null,
+      "inputRatePerMillionTokens": null,
+      "outputRatePerMillionTokens": null,
+      "cacheReadRatePerMillionTokens": null,
+      "cacheWriteRatePerMillionTokens": null,
+      "effectiveAt": null,
+      "retrievedAt": null,
+      "source": null,
+      "status": "unknown"
+    },
+    {
+      "provider": "claude",
+      "model": null,
+      "currency": null,
+      "inputRatePerMillionTokens": null,
+      "outputRatePerMillionTokens": null,
+      "cacheReadRatePerMillionTokens": null,
+      "cacheWriteRatePerMillionTokens": null,
+      "effectiveAt": null,
+      "retrievedAt": null,
+      "source": null,
+      "status": "unknown"
+    }
+  ]
+}

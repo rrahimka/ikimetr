@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "configVersion": "1.0.0",
+  "defaultBudgetClass": "NONE",
+  "limits": {
+    "perTask": {
+      "maxInputTokens": null,
+      "maxOutputTokens": null,
+      "maxCalls": null,
+      "maxCost": null
+    },
+    "providerTask": {
+      "maxInputTokens": null,
+      "maxOutputTokens": null,
+      "maxCalls": null,
+      "maxCost": null
+    },
+    "cloudCallsTask": {
+      "maxCalls": null
+    },
+    "providerDay": {
+      "maxInputTokens": null,
+      "maxOutputTokens": null,
+      "maxCalls": null,
+      "maxCost": null
+    },
+    "cloudDay": {
+      "maxInputTokens": null,
+      "maxOutputTokens": null,
+      "maxCalls": null,
+      "maxCost": null
+    },
+    "providerMonth": {
+      "maxInputTokens": null,
+      "maxOutputTokens": null,
+      "maxCalls": null,
+      "maxCost": null
+    },
+    "cloudMonth": {
+      "maxInputTokens": null,
+      "maxOutputTokens": null,
+      "maxCalls": null,
+      "maxCost": null
+    },
+    "retryLimits": {
+      "maxRetriesPerTask": null,
+      "maxRetriesPerProviderTask": null
+    },
+    "localWallTime": {
+      "maxMillisecondsPerTask": null
+    }
+  }
+}

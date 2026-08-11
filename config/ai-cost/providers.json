@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 1,
+  "configVersion": "1.0.0",
+  "providers": {
+    "local-ai": {
+      "enabled": false,
+      "role": "local-first-pass",
+      "model": null,
+      "invocationMode": "automatic",
+      "endpoint": {
+        "type": "ollama",
+        "baseUrlEnv": "IKIMETR_LOCAL_AI_URL",
+        "credentialEnv": null
+      },
+      "allowedDataClasses": ["public", "internal"],
+      "allowedRiskClasses": ["low"],
+      "allowedCapabilities": [
+        "routine-analysis",
+        "documentation",
+        "test-generation"
+      ],
+      "maxInputTokens": null,
+      "maxOutputTokens": null,
+      "maxCallsPerTask": null,
+      "maxCostPerTask": null,
+      "timeoutMs": null,
+      "retryPolicy": {
+        "maxRetries": null,
+        "retryOn": [],
+        "backoff": "none"
+      }
+    },
+    "deepseek": {
+      "enabled": false,
+      "role": "routine-implementer",
+      "model": null,
+      "invocationMode": "automatic",
+      "endpoint": {
+        "type": "openai-compatible",
+        "baseUrlEnv": "IKIMETR_DEEPSEEK_BASE_URL",
+        "credentialEnv": "IKIMETR_DEEPSEEK_API_KEY"
+      },
+      "allowedDataClasses": ["public", "internal"],
+      "allowedRiskClasses": ["low", "standard"],
+      "allowedCapabilities": [
+        "routine-analysis",
+        "routine-implementation",
+        "documentation",
+        "test-generation",
+        "low-risk-refactor"
+      ],
+      "maxInputTokens": null,
+      "maxOutputTokens": null,
+      "maxCallsPerTask": null,
+      "maxCostPerTask": null,
+      "timeoutMs": null,
+      "retryPolicy": {
+        "maxRetries": null,
+        "retryOn": [],
+        "backoff": "none"
+      }
+    },
+    "qwen": {
+      "enabled": false,
+      "role": "routine-implementer",
+      "model": null,
+      "invocationMode": "automatic",
+      "endpoint": {
+        "type": "openai-compatible",
+        "baseUrlEnv": "IKIMETR_QWEN_BASE_URL",
+        "credentialEnv": "IKIMETR_QWEN_API_KEY"
+      },
+      "allowedDataClasses": ["public", "internal"],
+      "allowedRiskClasses": ["low", "standard"],
+      "allowedCapabilities": [
+        "routine-analysis",
+        "routine-implementation",
+        "documentation",
+        "test-generation",
+        "low-risk-refactor"
+      ],
+      "maxInputTokens": null,
+      "maxOutputTokens": null,
+      "maxCallsPerTask": null,
+      "maxCostPerTask": null,
+      "timeoutMs": null,
+      "retryPolicy": {
+        "maxRetries": null,
+        "retryOn": [],
+        "backoff": "none"
+      }
+    },
+    "codex": {
+      "enabled": false,
+      "role": "primary-development-coordinator",
+      "model": null,
+      "invocationMode": "manual-handoff",
+      "endpoint": {
+        "type": "agent-session",
+        "baseUrlEnv": null,
+        "credentialEnv": null
+      },
+      "allowedDataClasses": ["public", "internal"],
+      "allowedRiskClasses": [
+        "low",
+        "standard",
+        "high",
+        "security-critical"
+      ],
+      "allowedCapabilities": [
+        "routine-analysis",
+        "routine-implementation",
+        "documentation",
+        "test-generation",
+        "low-risk-refactor",
+        "complex-implementation",
+        "complex-debugging",
+        "architecture-review",
+        "security-review"
+      ],
+      "maxInputTokens": null,
+      "maxOutputTokens": null,
+      "maxCallsPerTask": null,
+      "maxCostPerTask": null,
+      "timeoutMs": null,
+      "retryPolicy": {
+        "maxRetries": null,
+        "retryOn": [],
+        "backoff": "none"
+      }
+    },
+    "claude": {
+      "enabled": false,
+      "role": "specialist-reviewer",
+      "model": null,
+      "invocationMode": "manual-handoff",
+      "endpoint": {
+        "type": "agent-session",
+        "baseUrlEnv": null,
+        "credentialEnv": null
+      },
+      "allowedDataClasses": ["public", "internal"],
+      "allowedRiskClasses": ["high", "security-critical"],
+      "allowedCapabilities": [
+        "complex-debugging",
+        "architecture-review",
+        "security-review"
+      ],
+      "maxInputTokens": null,
+      "maxOutputTokens": null,
+      "maxCallsPerTask": null,
+      "maxCostPerTask": null,
+      "timeoutMs": null,
+      "retryPolicy": {
+        "maxRetries": null,
+        "retryOn": [],
+        "backoff": "none"
+      }
+    }
+  }
+}

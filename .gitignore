@@ -5,6 +5,7 @@ dist/
 coverage/
 *.tsbuildinfo
 *.log
+.ai-cost/
 
 .env
 .env.*

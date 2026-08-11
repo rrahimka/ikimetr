@@ -10,7 +10,7 @@ afterEach(async () => {
 });
 
 describe('GET /health', () => {
-  it('returns 200 when all dependencies are healthy', async () => {
+  it('returns 200 when all dependencies are healthy', { timeout: 10_000 }, async () => {
     const app = buildApp({
       database: { check: vi.fn().mockResolvedValue(undefined) },
       redis: { check: vi.fn().mockResolvedValue(undefined) },

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "configVersion": "1.0.0",
+  "policyVersion": "1.0.0",
+  "routes": {
+    "deterministic": {
+      "providers": [],
+      "approvalRequired": false
+    },
+    "local": {
+      "providers": ["local-ai"],
+      "approvalRequired": false
+    },
+    "cheap-cloud": {
+      "providers": ["deepseek", "qwen"],
+      "approvalRequired": true
+    },
+    "strong": {
+      "providers": ["codex", "claude"],
+      "approvalRequired": true
+    }
+  }
+}
