@@ -95,7 +95,7 @@ The `local-ai` entry in `config/ai-cost/providers.json` becomes:
 | max output | 512 tokens |
 | max calls/task | 1 |
 | max cost/task | 0 AZN |
-| timeout | 120,000 ms |
+| timeout | 180,000 ms |
 | retries | 0, no retry conditions, no backoff |
 
 All other providers remain disabled and unchanged.
@@ -136,7 +136,7 @@ finite limits:
 | cloud calls/task | `null` (not configured) |
 | cloud day/month limits | `null` (not configured) |
 | retry limits | 0 |
-| local wall time/task | 120,000 ms |
+| local wall time/task | 180,000 ms |
 
 Limits are hard ceilings, not usage targets. A missing or exhausted limit
 returns STOP; the system must not escalate automatically.
