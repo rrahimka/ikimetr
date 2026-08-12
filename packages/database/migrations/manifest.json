@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "migrations": [
+    {
+      "path": "packages/database/migrations/1786492800000_foundation.ts",
+      "sha256": "720dfd1145ab989974d426469aadd4eae84e2fb4e72a10bdf0b4bcd9b58f66fc"
+    }
+  ]
+}
