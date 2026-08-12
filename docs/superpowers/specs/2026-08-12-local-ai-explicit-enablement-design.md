@@ -245,7 +245,7 @@ condition requiring evidence and a narrowly approved corrective exception.
 
 - Only local-ai is enabled.
 - The exact model and digest are pinned and verified.
-- All limits are finite and fail closed.
+- All applicable local limits are finite and fail closed.
 - Cloud providers remain disabled and cloud budgets remain unconfigured; observed cloud calls stay zero.
 - Sensitive and Secret data are rejected.
 - No retry, fallback, provider reselection, tool execution, or paid call exists.
