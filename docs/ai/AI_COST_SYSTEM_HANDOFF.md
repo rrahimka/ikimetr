@@ -1,6 +1,6 @@
 # AI Cost System Handoff Checkpoint
 
-Status: Phase 3G.3 complete; Phase 3G.4 has not started. This checkpoint records the established state without rerunning the full verification suite.
+Status: Phase 3G.4 complete and verified at checkpoint `e8b7a35`. The next phase has not started.
 
 ## Completed phases
 
@@ -14,24 +14,27 @@ Status: Phase 3G.3 complete; Phase 3G.4 has not started. This checkpoint records
 - **Phase 3G.1 — TypeScript fixes:** Zod 4 compatibility, TypeScript strict-mode fixes, and Vitest 4 migration for DeepSeek adapter and tests.
 - **Phase 3G.2 — Cheap Cloud Invocation Boundary:** CheapCloudInvoker validates CHEAP_CLOUD + deepseek authorization from an already-computed RoutingDecision and delegates exactly once to DeepSeekAdapter. No routing, no retry, no fallback, no provider reselection.
 - **Phase 3G.3 — Execution Coordinator:** ExecutionCoordinator receives LocalInvoker and CheapCloudInvoker via constructor injection, validates all four authorization conditions (route, decision.decision, decision.route, provider_candidate) before dispatch, and returns invoker results unchanged. Unauthorized paths return denied with zero invoker calls.
+- **Phase 3G.4 — End-to-End AI Execution Integration:** AiExecutor wires CostRouter → ExecutionCoordinator → LocalInvoker/CheapCloudInvoker without changing component behavior. It calls routing and execution at most once, executes only LOCAL or CHEAP_CLOUD decisions, and provides no retry, fallback, or provider reselection.
 
 ## Current green baseline
 
-Latest full WSL-native checkpoint after Phase 3G.3:
+Fresh WSL-native verification on 2026-08-12 at checkpoint `e8b7a35`:
 
 - `pnpm lint` — PASS.
 - `pnpm typecheck` — PASS.
-- `pnpm test:unit` — 363/363 PASS (31 files).
+- `pnpm test:unit` — PASS.
 - `pnpm test:integration` — 3/3 PASS.
-- `pnpm build` — PASS.
+- `pnpm build` — PASS, including packages, API, worker, and Next.js web.
 
-Vitest workers capped at 4 (`maxWorkers: 4`) for WSL stability. One health unit test has a per-test 10s timeout due to WSL Fastify inject latency.
+The first integration attempt failed only because local PostgreSQL and Redis were not running. Docker Desktop WSL integration was restored without reinstalling Docker; the existing PostGIS and Redis containers then reported healthy, and the unchanged integration suite passed 3/3. Vitest workers remain capped at 4 (`maxWorkers: 4`) for WSL stability.
 
 ## Current workspace
 
-The workspace intentionally remains dirty and uncommitted. Existing tracked changes include `.gitignore`, `AGENTS.md`, `pnpm-lock.yaml`, and `vitest.config.ts`; important untracked areas include `.agents/provider-profiles/`, `.claude/skills/playwright-cli/`, `.playwright/`, `config/`, `docs/ai/`, `docs/superpowers/`, and `packages/ai-cost-system/`.
-
-No reset, checkout, stash, clean, commit, or merge was performed. Preserve all Phase 1/3A–3F/3G work.
+- Git checkpoint: `e8b7a35` on `main`, also preserved as `checkpoint/phase-3g4`.
+- Local and remote `main` were confirmed synchronized before verification.
+- The local `.env` was created from `.env.example`; env files remain gitignored.
+- PostgreSQL/PostGIS and Redis run through the existing Docker Compose definition and bind only to `127.0.0.1`.
+- No production code changed during verification.
 
 ## Current architecture
 
@@ -48,17 +51,26 @@ No reset, checkout, stash, clean, commit, or merge was performed. Preserve all P
 
 ## Local AI exact state
 
-- Ollama `0.32.6`, Windows endpoint `http://127.0.0.1:11434`; localhost only.
+- Ollama `0.32.7`, Windows endpoint `http://127.0.0.1:11434`; reachable from WSL through localhost only.
 - Model `qwen2.5-coder:7b`, digest `dae161e27b0e90dd1856c8bb3209201fd6736d8eb66298e75ed87571486f4364`, quantization `Q4_K_M`.
 - Acceptance verdict: **LIMITED**, approximately **3.58 generated tokens/s** average. Classification, tiny TypeScript, and simple debugging tests passed.
 - Approved role: short, low-risk, bounded tasks only. Current provider state: **DISABLED**.
 
 ## Next exact task
 
-**Phase 3G.4 — End-to-End AI Execution Integration.** Wire the existing CostRouter → ExecutionCoordinator → invokers into one controlled execution path. The router, coordinator, invokers, and adapters are already implemented and individually tested. This phase connects them without changing any component's internal behavior.
+**Explicit AI execution enablement — design and approval only.** Phase 3G.4 is complete, but provider execution remains disabled by policy. The next phase must define the smallest fail-closed enablement boundary before any provider is enabled.
 
-Design: [`docs/superpowers/specs/2026-08-10-phase-3g4-e2e-execution-integration-design.md`](../superpowers/specs/2026-08-10-phase-3g4-e2e-execution-integration-design.md)
-Plan: [`docs/superpowers/plans/2026-08-10-phase-3g4-e2e-execution-integration.md`](../superpowers/plans/2026-08-10-phase-3g4-e2e-execution-integration.md)
+Required decisions for that separate design:
+
+- preserve CostRouter as the sole routing authority;
+- keep Local AI limited to short, low-risk, bounded tasks;
+- keep Sensitive and Secret data prohibited from model context;
+- keep Ollama localhost-only;
+- require explicit configuration and verification evidence;
+- introduce no retry, fallback, autonomous provider selection, or paid API call;
+- do not implement Qwen or DeepSeek acceptance work in the same phase.
+
+Do not start implementation automatically. First create and approve a dedicated design, then a task-by-task TDD plan.
 
 ## Security invariants
 
@@ -71,4 +83,4 @@ Plan: [`docs/superpowers/plans/2026-08-10-phase-3g4-e2e-execution-integration.md
 
 ## Recommended continuation order
 
-Phase 3G.4 End-to-End Integration → explicit enablement → Qwen adapter → DeepSeek acceptance test → Verification/Fix Loop. Do not start any step automatically.
+Explicit enablement design/approval → explicit enablement implementation → Qwen adapter design → DeepSeek acceptance test → Verification/Fix Loop. Do not start any step automatically.
