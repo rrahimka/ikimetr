@@ -1,8 +1,49 @@
 # Local AI Explicit Enablement Design
 
 **Date:** 2026-08-12  
-**Status:** Proposed for written-spec review  
+**Status:** Deferred after feasibility review — do not implement  
 **Depends on:** Phase 3G.4 checkpoint `e8b7a35`
+
+## Feasibility decision
+
+**Decision:** keep `local-ai` disabled and defer this implementation.
+
+The security design is viable, but the present development value is too low for
+the additional integration surface:
+
+- the measured model speed is approximately 3.58 generated tokens/second;
+- a 512-token response can consume most of the 180-second allowance;
+- no application or development harness currently composes AiExecutor,
+  CostRouter, ExecutionCoordinator, and OllamaAdapter for real work;
+- configuration enablement alone would not route Codex or VS Code tasks to the
+  model;
+- adding a custom development harness now would duplicate capabilities better
+  provided by a mature coding harness;
+- current OpenCode/Ollama integrations still report model-discovery and local
+  tool-calling failures, so adopting that path now adds compatibility risk;
+- local output would still require Codex review, reducing expected quota savings.
+
+Nothing is discarded: the adapter, router, execution boundary, tests, model
+digest, limits, and this design remain ready for later use.
+
+### Reconsider only when all gates pass
+
+1. A specific integration target is selected and isolated from the production
+   website runtime.
+2. The local model sustains at least 10 generated tokens/second on the actual
+   laptop or replacement hardware.
+3. A representative benchmark of at least 20 İkiMetr low-risk tasks achieves at
+   least 80% deterministic acceptance without Codex rewriting the output.
+4. The chosen coding harness supports the exact Ollama model reliably and can
+   deny file edits, shell commands, network access, and MCP tools by default.
+5. The expected saved cloud/Codex work exceeds the measured review and waiting
+   time.
+6. Exact model/digest pinning, localhost isolation, finite budgets, one-call
+   limit, zero retry, and zero fallback remain enforced.
+
+Until then, the correct route is deterministic tools followed by Codex or an
+explicitly approved cloud provider. The next project work returns to the
+product development roadmap.
 
 ## Goal
 

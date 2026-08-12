@@ -1,6 +1,6 @@
 # AI Cost System Handoff Checkpoint
 
-Status: Phase 3G.4 complete and verified at checkpoint `e8b7a35`. The next phase has not started.
+Status: Phase 3G.4 complete and verified at checkpoint `e8b7a35`. Local AI enablement was evaluated and deferred; the provider remains disabled.
 
 ## Completed phases
 
@@ -58,19 +58,17 @@ The first integration attempt failed only because local PostgreSQL and Redis wer
 
 ## Next exact task
 
-**Explicit AI execution enablement — design and approval only.** Phase 3G.4 is complete, but provider execution remains disabled by policy. The next phase must define the smallest fail-closed enablement boundary before any provider is enabled.
+**Return to the product roadmap: Phase 00 / Task 00.02 — Database foundation.**
 
-Required decisions for that separate design:
+Do not implement it automatically. First create the dedicated Task 00.02
+specification from the approved architecture and security rules, review it,
+then create a TDD implementation plan.
 
-- preserve CostRouter as the sole routing authority;
-- keep Local AI limited to short, low-risk, bounded tasks;
-- keep Sensitive and Secret data prohibited from model context;
-- keep Ollama localhost-only;
-- require explicit configuration and verification evidence;
-- introduce no retry, fallback, autonomous provider selection, or paid API call;
-- do not implement Qwen or DeepSeek acceptance work in the same phase.
-
-Do not start implementation automatically. First create and approve a dedicated design, then a task-by-task TDD plan.
+Local AI enablement is deferred because the present 7B model is too slow and no
+development harness currently consumes the AI Cost System runtime. Reconsider
+only after the gates in
+[`2026-08-12-local-ai-explicit-enablement-design.md`](../superpowers/specs/2026-08-12-local-ai-explicit-enablement-design.md)
+pass. Keep `local-ai`, DeepSeek, cloud Qwen, Codex API, and Claude API disabled.
 
 ## Security invariants
 
@@ -83,4 +81,4 @@ Do not start implementation automatically. First create and approve a dedicated 
 
 ## Recommended continuation order
 
-Explicit enablement design/approval → explicit enablement implementation → Qwen adapter design → DeepSeek acceptance test → Verification/Fix Loop. Do not start any step automatically.
+Task 00.02 Database foundation → continue the approved product roadmap. Local AI enablement remains deferred until its feasibility gates pass. Do not start any step automatically.
