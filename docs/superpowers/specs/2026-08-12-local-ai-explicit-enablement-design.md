@@ -31,6 +31,20 @@ The model's advertised context length is not the task allowance. İkiMetr uses
 smaller limits to reduce latency, memory pressure, prompt-injection surface, and
 unnecessary context disclosure.
 
+## Approaches considered
+
+1. **Configuration-first enablement (selected):** enable the existing,
+   already-tested Ollama path through strict provider, budget, pricing, and
+   health evidence. This has the smallest production-code surface and preserves
+   the Phase 3G.4 boundaries.
+2. **Add a second runtime feature-flag layer:** keep configuration enabled but
+   introduce another application flag before AiExecutor. This adds duplicate
+   state and can create disagreement between policy and runtime, so it is not
+   selected.
+3. **Enable local AI while adding cloud Qwen support:** this combines unrelated
+   trust, credential, pricing, and network boundaries. It is rejected for this
+   phase.
+
 ## Scope
 
 ### In scope
@@ -119,8 +133,8 @@ finite limits:
 | provider-month input | 409,600 tokens |
 | provider-month output | 51,200 tokens |
 | provider-month cost | 0 AZN |
-| cloud calls/task | 0 |
-| cloud day/month cost | 0 AZN |
+| cloud calls/task | `null` (not configured) |
+| cloud day/month limits | `null` (not configured) |
 | retry limits | 0 |
 | local wall time/task | 120,000 ms |
 
@@ -197,7 +211,7 @@ All config and unit tests remain network-free. Add or update tests that prove:
 2. An enabled but incomplete local provider is rejected.
 3. Every cloud provider remains disabled.
 4. Default budget is `LOCAL_ONLY` and every applicable limit is finite.
-5. Retry limits and cloud-call allowance are zero.
+5. Retry limits are zero; cloud budgets are unconfigured and the `LOCAL_ONLY` class cannot authorize cloud.
 6. Public/internal + low-risk + allowed capability can route LOCAL when
    health evidence matches.
 7. Sensitive, Secret, standard/high risk, and disallowed capabilities stop.
@@ -232,7 +246,7 @@ condition requiring evidence and a narrowly approved corrective exception.
 - Only local-ai is enabled.
 - The exact model and digest are pinned and verified.
 - All limits are finite and fail closed.
-- Cloud providers and cloud calls remain disabled.
+- Cloud providers remain disabled and cloud budgets remain unconfigured; observed cloud calls stay zero.
 - Sensitive and Secret data are rejected.
 - No retry, fallback, provider reselection, tool execution, or paid call exists.
 - Config validation, targeted tests, full lint, typecheck, unit tests,
