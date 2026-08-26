@@ -10,18 +10,27 @@ afterEach(async () => {
 });
 
 describe('GET /health', () => {
-  it('returns 200 when all dependencies are healthy', { timeout: 10_000 }, async () => {
-    const app = buildApp({
-      database: { check: vi.fn().mockResolvedValue(undefined) },
-      redis: { check: vi.fn().mockResolvedValue(undefined) },
-    });
-    apps.push(app);
+  it(
+    'returns 200 when all dependencies are healthy',
+    { timeout: 10_000 },
+    async () => {
+      const app = buildApp({
+        database: { check: vi.fn().mockResolvedValue(undefined) },
+        redis: { check: vi.fn().mockResolvedValue(undefined) },
+        connection: {
+          check: vi.fn().mockResolvedValue(undefined),
+          transaction: vi.fn(),
+          close: vi.fn().mockResolvedValue(undefined),
+        },
+      });
+      apps.push(app);
 
-    const response = await app.inject({ method: 'GET', url: '/health' });
+      const response = await app.inject({ method: 'GET', url: '/health' });
 
-    expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ status: 'ok' });
-  });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({ status: 'ok' });
+    },
+  );
 
   it.each(['database', 'redis'] as const)(
     'returns a sanitized 503 when %s is unavailable',
@@ -41,6 +50,11 @@ describe('GET /health', () => {
             unavailableDependency === 'redis'
               ? vi.fn().mockRejectedValue(secretError)
               : vi.fn().mockResolvedValue(undefined),
+        },
+        connection: {
+          check: vi.fn().mockResolvedValue(undefined),
+          transaction: vi.fn(),
+          close: vi.fn().mockResolvedValue(undefined),
         },
       });
       apps.push(app);

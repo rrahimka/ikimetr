@@ -10,7 +10,7 @@ const databaseUrl =
 const redisUrl = process.env['REDIS_URL'] ?? 'redis://127.0.0.1:6379';
 const database = createDatabaseConnection(databaseUrl);
 const redis = createRedisHealthConnection(redisUrl);
-const app = buildApp({ database, redis });
+const app = buildApp({ database, redis, connection: database });
 
 beforeAll(async () => {
   await redis.connect();

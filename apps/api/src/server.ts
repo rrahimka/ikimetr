@@ -21,7 +21,10 @@ async function startApi(): Promise<void> {
   const environment = loadApiEnvironment();
   const database = createDatabaseConnection(environment.DATABASE_URL);
   const redis = createRedisHealthConnection(environment.REDIS_URL);
-  const app = buildApp({ database, redis }, { logger: true });
+  const app = buildApp(
+    { database, redis, connection: database },
+    { logger: true },
+  );
 
   app.addHook('onClose', async () => {
     await Promise.allSettled([database.close(), redis.close()]);

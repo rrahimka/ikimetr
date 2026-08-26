@@ -109,8 +109,12 @@ describe('database foundation migrations', () => {
         const firstRun = await runTestMigrations(databaseUrl);
         const secondRun = await runTestMigrations(databaseUrl);
 
-        expect(firstRun).toHaveLength(1);
-        expect(firstRun[0]?.name).toBe('1786492800000_foundation');
+        expect(firstRun.map((migration) => migration.name)).toEqual([
+          '1786492800000_foundation',
+          '1786492900000_identity_foundation',
+          '1786492910000_realtor_agency',
+          '1786492920000_property_core',
+        ]);
         expect(secondRun).toEqual([]);
 
         const extensions = await pool.query<{
@@ -168,7 +172,7 @@ describe('database foundation migrations', () => {
           GROUP BY role.rolname
         `);
         expect(history.rows).toEqual([
-          { migration_count: '1', owner: 'ikimetr_migrator' },
+          { migration_count: '4', owner: 'ikimetr_migrator' },
         ]);
 
         const roles = await pool.query<{
@@ -214,7 +218,26 @@ describe('database foundation migrations', () => {
           FROM information_schema.tables
           WHERE table_schema IN ('app', 'audit', 'ingestion')
         `);
-        expect(projectTableCount.rows).toEqual([{ count: '0' }]);
+        expect(projectTableCount.rows).toEqual([{ count: '10' }]);
+
+        const coreTables = await pool.query<{ name: string }>(`
+          SELECT table_name AS name
+          FROM information_schema.tables
+          WHERE table_schema = 'app'
+          ORDER BY table_name
+        `);
+        expect(coreTables.rows.map(({ name }) => name)).toEqual([
+          'agencies',
+          'agency_memberships',
+          'auth_identities',
+          'profiles',
+          'properties',
+          'property_images',
+          'property_status_history',
+          'realtor_profiles',
+          'sessions',
+          'users',
+        ]);
       });
     },
     integrationTimeout,
@@ -372,14 +395,14 @@ describe('database foundation migrations', () => {
             ) AS role_count
         `);
         expect(afterDown.rows).toEqual([
-          { history_count: '0', role_count: '3' },
+          { history_count: '3', role_count: '3' },
         ]);
 
         await runTestMigrations(databaseUrl);
         const afterUp = await pool.query<{ count: string }>(`
           SELECT COUNT(*)::text AS count FROM migration.pgmigrations
         `);
-        expect(afterUp.rows).toEqual([{ count: '1' }]);
+        expect(afterUp.rows).toEqual([{ count: '4' }]);
       });
     },
     integrationTimeout,

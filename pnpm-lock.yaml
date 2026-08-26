@@ -47,6 +47,16 @@ importers:
       redis:
         specifier: 6.2.0
         version: 6.2.0
+    devDependencies:
+      '@types/pg':
+        specifier: 8.21.0
+        version: 8.21.0
+      node-pg-migrate:
+        specifier: 9.0.0
+        version: 9.0.0(@types/pg@8.21.0)(pg@8.22.0)
+      pg:
+        specifier: 8.22.0
+        version: 8.22.0
 
   apps/web:
     dependencies:
