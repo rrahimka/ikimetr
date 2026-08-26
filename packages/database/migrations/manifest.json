@@ -4,6 +4,18 @@
     {
       "path": "packages/database/migrations/1786492800000_foundation.ts",
       "sha256": "720dfd1145ab989974d426469aadd4eae84e2fb4e72a10bdf0b4bcd9b58f66fc"
+    },
+    {
+      "path": "packages/database/migrations/1786492900000_identity_foundation.ts",
+      "sha256": "3f47035856c545e6a41ef30a7a636040463d2637882d36cce441f412b9599c0c"
+    },
+    {
+      "path": "packages/database/migrations/1786492910000_realtor_agency.ts",
+      "sha256": "187ee13c8e14b03d2b8522a1924785198a47bbf889e6e46a32905f15930b9749"
+    },
+    {
+      "path": "packages/database/migrations/1786492920000_property_core.ts",
+      "sha256": "ef1a0c7d84cdb151ef345efd1a3d1ce70ec4c28bd37212ec08d3947aa2019b22"
     }
   ]
 }
