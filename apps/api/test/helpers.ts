@@ -91,9 +91,11 @@ export async function truncateDatabase(
   await connection.transaction((tx) =>
     tx.query(
       `TRUNCATE app.users, app.auth_identities, app.sessions, app.profiles,
-       app.realtor_profiles, app.agencies, app.agency_memberships,
-       app.properties, app.property_status_history, app.property_images
-       RESTART IDENTITY CASCADE`,
+        app.realtor_profiles, app.agencies, app.agency_memberships,
+        app.properties, app.property_status_history, app.property_images,
+        app.request_matches, app.external_listings, app.listings,
+        app.client_requests
+        RESTART IDENTITY CASCADE`,
     ),
   );
 }

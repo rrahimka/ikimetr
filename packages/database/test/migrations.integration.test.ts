@@ -114,6 +114,10 @@ describe('database foundation migrations', () => {
           '1786492900000_identity_foundation',
           '1786492910000_realtor_agency',
           '1786492920000_property_core',
+          '1786492930000_marketplace_listings',
+          '1786492940000_client_requests',
+          '1786492950000_listings_title',
+          '1786492960000_phone_hash_width',
         ]);
         expect(secondRun).toEqual([]);
 
@@ -172,7 +176,7 @@ describe('database foundation migrations', () => {
           GROUP BY role.rolname
         `);
         expect(history.rows).toEqual([
-          { migration_count: '4', owner: 'ikimetr_migrator' },
+          { migration_count: '8', owner: 'ikimetr_migrator' },
         ]);
 
         const roles = await pool.query<{
@@ -218,7 +222,7 @@ describe('database foundation migrations', () => {
           FROM information_schema.tables
           WHERE table_schema IN ('app', 'audit', 'ingestion')
         `);
-        expect(projectTableCount.rows).toEqual([{ count: '10' }]);
+        expect(projectTableCount.rows).toEqual([{ count: '14' }]);
 
         const coreTables = await pool.query<{ name: string }>(`
           SELECT table_name AS name
@@ -230,11 +234,15 @@ describe('database foundation migrations', () => {
           'agencies',
           'agency_memberships',
           'auth_identities',
+          'client_requests',
+          'external_listings',
+          'listings',
           'profiles',
           'properties',
           'property_images',
           'property_status_history',
           'realtor_profiles',
+          'request_matches',
           'sessions',
           'users',
         ]);
@@ -395,14 +403,14 @@ describe('database foundation migrations', () => {
             ) AS role_count
         `);
         expect(afterDown.rows).toEqual([
-          { history_count: '3', role_count: '3' },
+          { history_count: '7', role_count: '3' },
         ]);
 
         await runTestMigrations(databaseUrl);
         const afterUp = await pool.query<{ count: string }>(`
-          SELECT COUNT(*)::text AS count FROM migration.pgmigrations
-        `);
-        expect(afterUp.rows).toEqual([{ count: '4' }]);
+           SELECT COUNT(*)::text AS count FROM migration.pgmigrations
+         `);
+        expect(afterUp.rows).toEqual([{ count: '8' }]);
       });
     },
     integrationTimeout,
