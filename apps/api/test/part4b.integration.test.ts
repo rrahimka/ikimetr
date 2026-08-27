@@ -36,19 +36,9 @@ async function insertListing(ctx: TestContext): Promise<string> {
 }
 
 let ctx: TestContext;
-let enqueued: { type: string; payload: unknown; key: string }[];
 
 beforeEach(async () => {
-  enqueued = [];
-  const capturing = (
-    type: string,
-    payload: unknown,
-    key: string,
-  ): Promise<void> => {
-    enqueued.push({ type, payload, key });
-    return Promise.resolve();
-  };
-  ctx = await setupTestContext(capturing);
+  ctx = await setupTestContext();
 }, 30000);
 afterEach(async () => {
   if (ctx) {
@@ -474,11 +464,12 @@ test('billing webhook enqueues PART 4A notification job', async () => {
     headers: { 'x-payment-signature': sig },
     payload: event,
   });
-  expect(
-    enqueued.some(
-      (j) =>
-        j.type === 'notification.deliver' &&
-        j.key === `sub:activated:${subscriptionId}`,
+
+  const jobs = await ctx.connection.transaction((tx) =>
+    tx.query<{ id: string }>(
+      `SELECT id FROM app.jobs WHERE idempotency_key = $1 AND type = 'notification.deliver'`,
+      [`sub:activated:${subscriptionId}`],
     ),
-  ).toBe(true);
+  );
+  expect(jobs.rowCount).toBe(1);
 });
