@@ -50,48 +50,64 @@ export async function createConversation(
     throw new NotFoundError('target user not found');
   }
 
-  const existing = await db.transaction((tx) =>
-    tx.query<{ id: string }>(
-      `SELECT c.id FROM app.conversations c
-       JOIN app.conversation_participants p1 ON p1.conversation_id = c.id
-       JOIN app.conversation_participants p2 ON p2.conversation_id = c.id
-       WHERE c.conversation_type = 'direct'
-         AND p1.user_id = $1 AND p2.user_id = $2
-       LIMIT 1`,
-      [currentUserId, withUserId],
-    ),
-  );
-  if (existing.rowCount !== null && existing.rowCount > 0) {
-    return getConversation(db, existing.rows[0]!.id, currentUserId);
+  // Stable key for the unordered pair so A+B == B+A. Enforced by a partial
+  // UNIQUE index on app.conversations.direct_pair_key. The INSERT ... ON
+  // CONFLICT handles the common case (a committed duplicate exists), and we
+  // also catch a unique violation raised at commit time under a concurrent
+  // race and fall back to the existing row.
+  const directPairKey = [currentUserId, withUserId].sort().join(':');
+
+  async function lookupExisting(): Promise<string> {
+    const found = await db.transaction((tx) =>
+      tx.query<{ id: string }>(
+        `SELECT id FROM app.conversations WHERE direct_pair_key = $1`,
+        [directPairKey],
+      ),
+    );
+    const row = found.rows[0];
+    if (!row) {
+      throw new Error('conversation lookup failed');
+    }
+    return row.id;
   }
 
-  const created = await db.transaction(async (tx) => {
-    const inserted = await tx.query<ConversationInsertRow>(
-      `INSERT INTO app.conversations (conversation_type)
-       VALUES ('direct')
-       RETURNING id, conversation_type, created_at, updated_at`,
-      [],
-    );
-    const conversation = inserted.rows[0];
-    if (!conversation) {
-      throw new Error('conversation insert failed');
+  let conversationId: string;
+  try {
+    const inserted = await db.transaction(async (tx) => {
+      const r = await tx.query<ConversationInsertRow>(
+        `INSERT INTO app.conversations (conversation_type, direct_pair_key)
+         VALUES ('direct', $1)
+         ON CONFLICT (direct_pair_key) DO NOTHING
+         RETURNING id, conversation_type, created_at, updated_at`,
+        [directPairKey],
+      );
+      if (r.rowCount !== null && r.rowCount > 0) {
+        const conversation = r.rows[0]!;
+        await tx.query(
+          `INSERT INTO app.conversation_participants (conversation_id, user_id)
+           VALUES ($1, $2), ($1, $3)
+           ON CONFLICT DO NOTHING`,
+          [conversation.id, currentUserId, withUserId],
+        );
+        return conversation;
+      }
+      return null;
+    });
+    if (inserted !== null) {
+      conversationId = inserted.id;
+    } else {
+      conversationId = await lookupExisting();
     }
-    await tx.query(
-      `INSERT INTO app.conversation_participants (conversation_id, user_id)
-       VALUES ($1, $2), ($1, $3)`,
-      [conversation.id, currentUserId, withUserId],
-    );
-    return conversation;
-  });
+  } catch (error) {
+    if ((error as { code?: string }).code === '23505') {
+      conversationId = await lookupExisting();
+    } else {
+      throw error;
+    }
+  }
 
-  return {
-    id: created.id,
-    type: created.conversation_type,
-    createdAt: created.created_at,
-    updatedAt: created.updated_at,
-    participantIds: [currentUserId, withUserId],
-    lastMessage: null,
-  };
+  const conversation = await getConversation(db, conversationId, currentUserId);
+  return conversation;
 }
 
 export async function requireParticipant(

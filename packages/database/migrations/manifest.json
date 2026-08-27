@@ -56,6 +56,10 @@
     {
       "path": "packages/database/migrations/1786494600000_seed_plans.ts",
       "sha256": "a80276d9bee5cd3f9a687780b789545779b4356a74773920aa1b8a45f9bc8aa6"
+    },
+    {
+      "path": "packages/database/migrations/1786494700000_conversation_direct_pair.ts",
+      "sha256": "5b77989261e6bf25c733f81039ebdc30ca01cdc2d36d76b043e670dc213f0ad7"
     }
   ]
 }

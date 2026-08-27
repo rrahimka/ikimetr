@@ -124,6 +124,7 @@ describe('database foundation migrations', () => {
           '1786494400000_billing_core',
           '1786494500000_audit_log',
           '1786494600000_seed_plans',
+          '1786494700000_conversation_direct_pair',
         ]);
         expect(secondRun).toEqual([]);
 
@@ -182,7 +183,7 @@ describe('database foundation migrations', () => {
           GROUP BY role.rolname
         `);
         expect(history.rows).toEqual([
-          { migration_count: '14', owner: 'ikimetr_migrator' },
+          { migration_count: '15', owner: 'ikimetr_migrator' },
         ]);
 
         const roles = await pool.query<{
@@ -420,14 +421,14 @@ describe('database foundation migrations', () => {
             ) AS role_count
         `);
         expect(afterDown.rows).toEqual([
-          { history_count: '13', role_count: '3' },
+          { history_count: '14', role_count: '3' },
         ]);
 
         await runTestMigrations(databaseUrl);
         const afterUp = await pool.query<{ count: string }>(`
            SELECT COUNT(*)::text AS count FROM migration.pgmigrations
          `);
-        expect(afterUp.rows).toEqual([{ count: '14' }]);
+        expect(afterUp.rows).toEqual([{ count: '15' }]);
       });
     },
     integrationTimeout,
