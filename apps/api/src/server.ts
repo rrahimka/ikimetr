@@ -10,7 +10,7 @@ import {
 } from './environment.js';
 import { createRedisHealthConnection, createRedisClient } from './redis.js';
 import { createPaymentProvider } from './billing/provider.js';
-import { createJobEnqueue } from './queue/enqueue.js';
+import { createOutbox } from './queue/outbox.js';
 
 function loadLocalEnvironment(): void {
   if (existsSync('.env')) {
@@ -24,16 +24,22 @@ async function startApi(): Promise<void> {
   const database = createDatabaseConnection(environment.DATABASE_URL);
   const redis = createRedisHealthConnection(environment.REDIS_URL);
   const rateLimitRedis = createRedisClient(environment.REDIS_URL);
-  const enqueueJob = createJobEnqueue(database, redis);
+  const outbox = createOutbox(redis);
   const paymentProvider = createPaymentProvider(environment);
+  const trustedProxies = environment.API_TRUSTED_PROXIES
+    ? environment.API_TRUSTED_PROXIES.split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+    : undefined;
   const app = buildApp(
     {
       database,
       redis,
       connection: database,
-      enqueueJob,
+      outbox,
       paymentProvider,
       rateLimitRedis,
+      ...(trustedProxies ? { trustedProxies } : {}),
     },
     { logger: true },
   );

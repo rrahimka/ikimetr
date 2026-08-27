@@ -7,20 +7,22 @@ import Fastify from 'fastify';
 import { AppError } from './errors.js';
 import type { PaymentProvider } from './billing/provider.js';
 import { registerRoutes } from './routes.js';
-
-export type JobEnqueue = (
-  type: string,
-  payload: unknown,
-  idempotencyKey: string,
-) => Promise<void>;
+import { type Outbox, insertJobRow } from './queue/outbox.js';
 
 export interface AppDependencies {
   database: HealthProbe;
   redis: HealthProbe;
   connection: DatabaseConnection;
-  enqueueJob?: JobEnqueue;
+  outbox?: Outbox;
   paymentProvider?: PaymentProvider;
   rateLimitRedis?: RedisClientType;
+  /**
+   * Trusted reverse-proxy CIDRs. When set, Fastify derives `request.ip` from a
+   * trusted `X-Forwarded-For` hop so the rate limiter keys on the real client
+   * IP instead of the proxy's address. Leave empty to rate-limit on the direct
+   * socket peer (appropriate when the API has no trusted proxy in front of it).
+   */
+  trustedProxies?: string[];
 }
 
 export interface BuildAppOptions {
@@ -43,7 +45,12 @@ export function buildApp(
   dependencies: AppDependencies,
   options: BuildAppOptions = {},
 ) {
-  const app = Fastify({ logger: options.logger ?? false });
+  const app = Fastify({
+    logger: options.logger ?? false,
+    ...(dependencies.trustedProxies && dependencies.trustedProxies.length > 0
+      ? { trustProxy: dependencies.trustedProxies }
+      : {}),
+  });
 
   const corsAllowList = (process.env['API_CORS_ORIGINS'] ?? '')
     .split(',')
@@ -129,10 +136,14 @@ export function buildApp(
     },
   );
 
+  const outbox: Outbox =
+    dependencies.outbox ??
+    ({ insertJob: insertJobRow, wake: async () => undefined } as Outbox);
+
   registerRoutes(
     app,
     dependencies.connection,
-    dependencies.enqueueJob ?? (async () => undefined),
+    outbox,
     dependencies.paymentProvider,
     dependencies.rateLimitRedis,
   );

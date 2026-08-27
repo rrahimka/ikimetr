@@ -1,7 +1,7 @@
 import type { DatabaseConnection } from '@ikimetr/database';
 
 import { NotFoundError, ValidationError } from '../errors.js';
-import type { JobEnqueue } from '../app.js';
+import type { Outbox } from '../queue/outbox.js';
 import {
   MESSAGES_MAX_PAGE_SIZE,
   type ConversationQuery,
@@ -229,10 +229,11 @@ export async function sendMessage(
   conversationId: string,
   senderUserId: string,
   input: SendMessageInput,
-  enqueueJob: JobEnqueue,
+  outbox: Outbox,
 ): Promise<MessageRecord> {
   await requireParticipant(db, conversationId, senderUserId);
 
+  const jobIds: string[] = [];
   const inserted = await db.transaction(async (tx) => {
     const message = await tx.query<MessageRow>(
       `INSERT INTO app.messages (conversation_id, sender_user_id, content_type, content)
@@ -244,34 +245,41 @@ export async function sendMessage(
       'UPDATE app.conversations SET updated_at = now() WHERE id = $1',
       [conversationId],
     );
+    const others = await tx.query<{ user_id: string }>(
+      `SELECT user_id FROM app.conversation_participants
+       WHERE conversation_id = $1 AND user_id <> $2`,
+      [conversationId, senderUserId],
+    );
     const row = message.rows[0];
     if (!row) {
       throw new Error('message insert failed');
     }
+    for (const other of others.rows) {
+      const jobId = await outbox.insertJob(
+        tx,
+        'notification.deliver',
+        {
+          userId: other.user_id,
+          type: 'new_message',
+          referenceType: 'conversation',
+          referenceId: conversationId,
+          title: 'New message',
+          body: input.content,
+        },
+        `new_message:${row.id}:${other.user_id}`,
+      );
+      if (jobId) {
+        jobIds.push(jobId);
+      }
+    }
     return row;
   });
 
-  const others = await db.transaction((tx) =>
-    tx.query<{ user_id: string }>(
-      `SELECT user_id FROM app.conversation_participants
-       WHERE conversation_id = $1 AND user_id <> $2`,
-      [conversationId, senderUserId],
-    ),
-  );
-
-  for (const other of others.rows) {
-    await enqueueJob(
-      'notification.deliver',
-      {
-        userId: other.user_id,
-        type: 'new_message',
-        referenceType: 'conversation',
-        referenceId: conversationId,
-        title: 'New message',
-        body: input.content,
-      },
-      `new_message:${inserted.id}:${other.user_id}`,
-    );
+  // Wake after commit. If Redis is down the durable queued row survives and the
+  // worker reconciler (requeuePending) re-enqueues it — the notification can
+  // never be lost by a crash between the message commit and the Redis push.
+  for (const jobId of jobIds) {
+    await outbox.wake(jobId);
   }
 
   return toMessage(inserted);

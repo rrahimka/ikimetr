@@ -127,8 +127,9 @@ export interface TestContext {
 }
 
 export async function setupTestContext(
-  enqueueJob?: AppDependencies['enqueueJob'],
+  outbox?: AppDependencies['outbox'],
   withRateLimitRedis = false,
+  trustedProxies?: string[],
 ): Promise<TestContext> {
   const database = await createTestDatabase();
   await migrateDatabase(database.databaseUrl);
@@ -141,8 +142,9 @@ export async function setupTestContext(
     database: connection,
     redis: redisHealth,
     connection,
-    ...(enqueueJob === undefined ? {} : { enqueueJob }),
+    ...(outbox === undefined ? {} : { outbox }),
     ...(rateLimitRedis === undefined ? {} : { rateLimitRedis }),
+    ...(trustedProxies === undefined ? {} : { trustedProxies }),
   };
   const app = buildApp(dependencies, { logger: true });
   await app.ready();

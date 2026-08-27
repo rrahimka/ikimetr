@@ -2,7 +2,7 @@ import type {
   DatabaseConnection,
   DatabaseTransaction,
 } from '@ikimetr/database';
-import type { JobEnqueue } from '../app.js';
+import type { Outbox } from '../queue/outbox.js';
 import { type PaymentEvent, type PaymentProvider } from './provider.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../errors.js';
 import { writeAudit } from '../audit.js';
@@ -307,6 +307,7 @@ export async function createCheckout(
 export interface WebhookResult {
   applied: boolean;
   reason?: string;
+  jobIds?: string[];
 }
 
 export async function handleWebhook(
@@ -314,7 +315,7 @@ export async function handleWebhook(
   provider: PaymentProvider,
   rawBody: unknown,
   signature: string | undefined,
-  enqueueJob: JobEnqueue,
+  outbox: Outbox,
 ): Promise<WebhookResult> {
   if (!signature) {
     throw new ValidationError('missing webhook signature');
@@ -328,7 +329,7 @@ export async function handleWebhook(
     throw new ValidationError('webhook event missing id');
   }
 
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const subLookup = await tx.query<{ user_id: string }>(
       `SELECT user_id FROM app.subscriptions WHERE provider = $1 AND provider_payment_id = $2 LIMIT 1`,
       [provider.name, event.paymentId ?? event.id],
@@ -357,23 +358,33 @@ export async function handleWebhook(
     }
 
     if (event.type === 'payment.succeeded') {
-      return applyPaymentSucceeded(tx, provider, event, enqueueJob);
+      return applyPaymentSucceeded(tx, provider, event, outbox);
     }
     if (event.type === 'subscription.cancelled') {
-      return applySubscriptionCancelled(tx, provider, event, enqueueJob);
+      return applySubscriptionCancelled(tx, provider, event, outbox);
     }
     if (event.type === 'subscription.expired') {
-      return applySubscriptionExpired(tx, provider, event, enqueueJob);
+      return applySubscriptionExpired(tx, provider, event, outbox);
     }
     return { applied: true, reason: 'ignored' };
   });
+
+  // Wake committed job ids AFTER the outer transaction commits, so a job is
+  // never pushed to Redis before the business event is durable. If the wake
+  // fails, the durable queued row remains and the worker reconciler recovers it.
+  if (result.jobIds && result.jobIds.length > 0) {
+    for (const jobId of result.jobIds) {
+      await outbox.wake(jobId);
+    }
+  }
+  return result;
 }
 
 async function applyPaymentSucceeded(
   tx: DatabaseTransaction,
   provider: PaymentProvider,
   event: PaymentEvent,
-  enqueueJob: JobEnqueue,
+  outbox: Outbox,
 ): Promise<WebhookResult> {
   const lookup = await tx.query<{
     id: string;
@@ -427,7 +438,9 @@ async function applyPaymentSucceeded(
      WHERE provider = $1 AND provider_payment_id = $2`,
     [provider.name, event.paymentId ?? event.id],
   );
-  await enqueueJob(
+  const jobIds: string[] = [];
+  const jobId = await outbox.insertJob(
+    tx,
     'notification.deliver',
     {
       userId: sub.user_id,
@@ -439,14 +452,17 @@ async function applyPaymentSucceeded(
     },
     `sub:activated:${sub.id}`,
   );
-  return { applied: true };
+  if (jobId) {
+    jobIds.push(jobId);
+  }
+  return { applied: true, jobIds };
 }
 
 async function applySubscriptionCancelled(
   tx: DatabaseTransaction,
   provider: PaymentProvider,
   event: PaymentEvent,
-  enqueueJob: JobEnqueue,
+  outbox: Outbox,
 ): Promise<WebhookResult> {
   const result = await tx.query<{
     id: string;
@@ -463,7 +479,9 @@ async function applySubscriptionCancelled(
     return { applied: false, reason: 'no_subscription' };
   }
   const sub = result.rows[0]!;
-  await enqueueJob(
+  const jobIds: string[] = [];
+  const jobId = await outbox.insertJob(
+    tx,
     'notification.deliver',
     {
       userId: sub.user_id,
@@ -475,14 +493,17 @@ async function applySubscriptionCancelled(
     },
     `sub:cancelled:${sub.id}`,
   );
-  return { applied: true };
+  if (jobId) {
+    jobIds.push(jobId);
+  }
+  return { applied: true, jobIds };
 }
 
 async function applySubscriptionExpired(
   tx: DatabaseTransaction,
   provider: PaymentProvider,
   event: PaymentEvent,
-  enqueueJob: JobEnqueue,
+  outbox: Outbox,
 ): Promise<WebhookResult> {
   const result = await tx.query<{ id: string; user_id: string }>(
     `UPDATE app.subscriptions
@@ -495,7 +516,9 @@ async function applySubscriptionExpired(
     return { applied: false, reason: 'no_subscription' };
   }
   const sub = result.rows[0]!;
-  await enqueueJob(
+  const jobIds: string[] = [];
+  const jobId = await outbox.insertJob(
+    tx,
     'notification.deliver',
     {
       userId: sub.user_id,
@@ -507,7 +530,10 @@ async function applySubscriptionExpired(
     },
     `sub:expired:${sub.id}`,
   );
-  return { applied: true };
+  if (jobId) {
+    jobIds.push(jobId);
+  }
+  return { applied: true, jobIds };
 }
 
 export async function createOwnerAlert(

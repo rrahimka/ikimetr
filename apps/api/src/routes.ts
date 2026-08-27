@@ -109,7 +109,7 @@ import {
 } from './requests/service.js';
 import { createRequestSchema, updateRequestSchema } from './requests/schema.js';
 import { matchListing, matchRequest } from './matching/service.js';
-import type { JobEnqueue } from './app.js';
+import type { Outbox } from './queue/outbox.js';
 import {
   conversationParamsSchema,
   conversationQuerySchema,
@@ -144,7 +144,7 @@ function publicUser(user: AuthUser) {
 export function registerRoutes(
   app: FastifyInstance,
   connection: DatabaseConnection,
-  enqueueJob: JobEnqueue,
+  outbox: Outbox,
   paymentProvider?: PaymentProvider,
   rateLimitRedis?: RedisClientType,
 ): void {
@@ -637,7 +637,7 @@ export function registerRoutes(
         id,
         request.user!.id,
         body,
-        enqueueJob,
+        outbox,
       );
       return reply.code(201).send({ message });
     },
@@ -796,7 +796,7 @@ export function registerRoutes(
         provider,
         request.body,
         typeof signature === 'string' ? signature : undefined,
-        enqueueJob,
+        outbox,
       );
       return reply.code(200).send(result);
     },
