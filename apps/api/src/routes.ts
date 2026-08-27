@@ -46,6 +46,20 @@ import {
   updatePropertySchema,
   updateRealtorSchema,
 } from './schemas.js';
+import { ingestListing } from './ingestion/service.js';
+import { ingestionPayloadSchema } from './ingestion/contract.js';
+import { createServiceAuthPreHandler } from './ingestion/guard.js';
+import { searchListings, ownerFeedListings } from './search/service.js';
+import { ownerFeedQuerySchema, searchQuerySchema } from './search/schema.js';
+import {
+  archiveRequest,
+  createRequest,
+  getRequest,
+  listRequests,
+  updateRequest,
+} from './requests/service.js';
+import { createRequestSchema, updateRequestSchema } from './requests/schema.js';
+import { matchListing, matchRequest } from './matching/service.js';
 
 function publicUser(user: AuthUser) {
   return { id: user.id, email: user.email, status: user.status };
@@ -328,6 +342,102 @@ export function registerRoutes(
         throw new ForbiddenError('not allowed to view this property');
       }
       return { images: await getPropertyImages(connection, id) };
+    },
+  );
+
+  // ---- Search (public read model) ----
+  app.get('/api/v1/search', async (request) => {
+    const query = searchQuerySchema.parse(request.query ?? {});
+    return searchListings(connection, query);
+  });
+
+  // ---- Ingestion (service-to-service) ----
+  app.post(
+    '/api/v1/ingestion/listings',
+    {
+      preHandler: createServiceAuthPreHandler(
+        process.env['INGESTION_SERVICE_TOKEN'],
+      ),
+    },
+    async (request, reply) => {
+      const payload = ingestionPayloadSchema.parse(request.body ?? {});
+      const result = await ingestListing(connection, payload);
+      return reply.code(201).send({ result });
+    },
+  );
+
+  // ---- Owner Feed ----
+  app.get(
+    '/api/v1/owner-feed',
+    { preHandler: requireAuth },
+    async (request) => {
+      const query = ownerFeedQuerySchema.parse(request.query ?? {});
+      return ownerFeedListings(connection, query);
+    },
+  );
+
+  // ---- Client Requests ----
+  app.post(
+    '/api/v1/requests',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const body = createRequestSchema.parse(request.body ?? {});
+      const created = await createRequest(connection, request.user!.id, body);
+      return reply.code(201).send({ request: created });
+    },
+  );
+
+  app.get('/api/v1/requests', { preHandler: requireAuth }, async (request) => {
+    const options = paginationSchema.parse(request.query ?? {});
+    return listRequests(connection, request.user!.id, options);
+  });
+
+  app.get(
+    '/api/v1/requests/:id',
+    { preHandler: requireAuth },
+    async (request) => {
+      const { id } = request.params as { id: string };
+      return { request: await getRequest(connection, id, request.user!.id) };
+    },
+  );
+
+  app.patch(
+    '/api/v1/requests/:id',
+    { preHandler: requireAuth },
+    async (request) => {
+      const { id } = request.params as { id: string };
+      const fields = updateRequestSchema.parse(request.body ?? {});
+      return {
+        request: await updateRequest(connection, id, request.user!.id, fields),
+      };
+    },
+  );
+
+  app.post(
+    '/api/v1/requests/:id/archive',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const created = await archiveRequest(connection, id, request.user!.id);
+      return reply.send({ request: created });
+    },
+  );
+
+  app.get(
+    '/api/v1/requests/:id/matches',
+    { preHandler: requireAuth },
+    async (request) => {
+      const { id } = request.params as { id: string };
+      return matchRequest(connection, id, request.user!.id);
+    },
+  );
+
+  app.get(
+    '/api/v1/listings/:id/matches',
+    { preHandler: requireAuth },
+    async (request) => {
+      const { id } = request.params as { id: string };
+      return matchListing(connection, id, request.user!.id);
     },
   );
 }
