@@ -51,21 +51,37 @@ export async function createTestDatabase(): Promise<TestDatabase> {
     connectionTimeoutMillis: 5_000,
     max: 1,
   });
+  // Best-effort: never let a killed backend become an unhandled rejection.
+  adminPool.on('error', () => {});
   await adminPool.query(`CREATE DATABASE "${databaseName}"`);
   return { databaseUrl: databaseUrl.toString(), databaseName, adminPool };
 }
 
 export async function dropTestDatabase(db: TestDatabase): Promise<void> {
   try {
-    await db.adminPool.query(
-      `SELECT pg_terminate_backend(pid)
-       FROM pg_stat_activity
-       WHERE datname = $1 AND pid <> pg_backend_pid()`,
-      [db.databaseName],
-    );
-    await db.adminPool.query(`DROP DATABASE "${db.databaseName}" WITH (FORCE)`);
+    try {
+      await db.adminPool.query(
+        `SELECT pg_terminate_backend(pid)
+         FROM pg_stat_activity
+         WHERE datname = $1 AND pid <> pg_backend_pid()`,
+        [db.databaseName],
+      );
+    } catch {
+      // Connections may already be gone; fall through to DROP.
+    }
+    try {
+      await db.adminPool.query(
+        `DROP DATABASE "${db.databaseName}" WITH (FORCE)`,
+      );
+    } catch {
+      // Database may already be dropped or still busy; best-effort cleanup.
+    }
   } finally {
-    await db.adminPool.end();
+    try {
+      await db.adminPool.end();
+    } catch {
+      // ignore
+    }
   }
 }
 

@@ -24,6 +24,12 @@ export function createDatabaseConnection(
     idleTimeoutMillis: 30_000,
     max: 10,
   });
+  // Swallow client-level errors. During teardown (e.g. DROP DATABASE ... WITH
+  // (FORCE) or pg_terminate_backend) idle clients are killed by the server with
+  // a FATAL; without this handler the emitted 'error' becomes an unhandled
+  // rejection that fails the whole test run even though all tests passed.
+  // Optional chaining keeps the mock Pool used by unit tests working.
+  pool.on?.('error', () => {});
   let closed = false;
 
   const assertOpen = (): void => {
