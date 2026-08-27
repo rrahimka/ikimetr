@@ -16,6 +16,16 @@ const apiEnvironmentSchema = z.object({
   INGESTION_SERVICE_TOKEN: z.string().min(16).optional(),
   PAYMENT_PROVIDER: z.enum(['test', 'stripe', 'epoint']).default('test'),
   PAYMENT_PROVIDER_SECRET: z.string().min(1).optional(),
+  API_TRUSTED_PROXIES: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      'Comma-separated CIDR/IP list of trusted reverse proxies. When set, ' +
+        'Fastify derives the real client IP from a trusted X-Forwarded-For hop ' +
+        'so rate limiting keys on the client, not the proxy. Leave unset when ' +
+        'no trusted proxy sits in front of the API.',
+    ),
 });
 
 export type ApiEnvironment = z.infer<typeof apiEnvironmentSchema>;
