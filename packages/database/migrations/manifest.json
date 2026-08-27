@@ -31,7 +31,7 @@
     },
     {
       "path": "packages/database/migrations/1786492960000_phone_hash_width.ts",
-      "sha256": "9ea268e71d8a15677715a50b3731065f42e72380387812715ac45065ef49b7a7"
+      "sha256": "6ebf24991f370d798de5979a19ef8ed5139e4ae10964ae1533790f608c02865e"
     }
   ]
 }
