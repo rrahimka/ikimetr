@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import type { RedisClientType } from 'redis';
 import type { DatabaseConnection } from '@ikimetr/database';
 
 import { ForbiddenError, UnauthenticatedError } from './errors.js';
@@ -8,9 +9,13 @@ import type { AuthUser } from './identity/service.js';
 import type { PaymentProvider } from './billing/provider.js';
 import {
   DEFAULT_TEST_SECRET,
-  HmacPaymentProvider,
+  SandboxPaymentProvider,
 } from './billing/provider.js';
 import { requirePlatformAdmin } from './admin/guard.js';
+import {
+  createRateLimitPre,
+  type RateLimitPreHandler,
+} from './security/rate-limit.js';
 import {
   adminListQuerySchema,
   adminStatusUpdateSchema,
@@ -28,6 +33,7 @@ import {
 import {
   createCheckoutSchema,
   ownerAlertCreateSchema,
+  ownerAlertListSchema,
   webhookParamsSchema,
 } from './billing/schema.js';
 import {
@@ -140,11 +146,18 @@ export function registerRoutes(
   connection: DatabaseConnection,
   enqueueJob: JobEnqueue,
   paymentProvider?: PaymentProvider,
+  rateLimitRedis?: RedisClientType,
 ): void {
   const requireAuth = createAuthPreHandler(connection);
+  const rateLimit = (
+    keyPrefix: string,
+    limit: number,
+    windowMs: number,
+  ): RateLimitPreHandler =>
+    createRateLimitPre(rateLimitRedis, { keyPrefix, limit, windowMs });
   const provider: PaymentProvider =
     paymentProvider ??
-    new HmacPaymentProvider(
+    new SandboxPaymentProvider(
       {
         name: 'test',
         eventTypeMap: (raw) => {
@@ -173,7 +186,13 @@ export function registerRoutes(
     await requirePlatformAdmin(connection, request.user.id);
   };
 
-  const adminPre = { preHandler: [requireAuth, requirePlatformAdminPre] };
+  const adminPre = {
+    preHandler: [
+      requireAuth,
+      requirePlatformAdminPre,
+      rateLimit('admin.mutate', 30, 60_000),
+    ],
+  };
 
   const membershipFor = async (
     agencyId: string | null,
@@ -182,30 +201,46 @@ export function registerRoutes(
     agencyId === null ? null : getMembership(connection, agencyId, userId);
 
   // ---- Auth ----
-  app.post('/api/v1/auth/register', async (request, reply) => {
-    const body = registerSchema.parse(request.body ?? {});
-    const { userId } = await registerUser(connection, body);
-    const token = await createSession(connection, userId, sessionMeta(request));
-    const user = await getUserFromSession(connection, token);
-    if (user === null) {
-      throw new UnauthenticatedError('session not found');
-    }
-    return reply.code(201).send({ token, user: publicUser(user) });
-  });
+  app.post(
+    '/api/v1/auth/register',
+    { preHandler: rateLimit('auth.register', 10, 60_000) },
+    async (request, reply) => {
+      const body = registerSchema.parse(request.body ?? {});
+      const { userId } = await registerUser(connection, body);
+      const token = await createSession(
+        connection,
+        userId,
+        sessionMeta(request),
+      );
+      const user = await getUserFromSession(connection, token);
+      if (user === null) {
+        throw new UnauthenticatedError('session not found');
+      }
+      return reply.code(201).send({ token, user: publicUser(user) });
+    },
+  );
 
-  app.post('/api/v1/auth/login', async (request, reply) => {
-    const body = loginSchema.parse(request.body ?? {});
-    const user = await authenticateUser(connection, body.email, body.password);
-    if (user === null) {
-      throw new UnauthenticatedError('invalid credentials');
-    }
-    const token = await createSession(
-      connection,
-      user.id,
-      sessionMeta(request),
-    );
-    return reply.code(200).send({ token, user: publicUser(user) });
-  });
+  app.post(
+    '/api/v1/auth/login',
+    { preHandler: rateLimit('auth.login', 10, 60_000) },
+    async (request, reply) => {
+      const body = loginSchema.parse(request.body ?? {});
+      const user = await authenticateUser(
+        connection,
+        body.email,
+        body.password,
+      );
+      if (user === null) {
+        throw new UnauthenticatedError('invalid credentials');
+      }
+      const token = await createSession(
+        connection,
+        user.id,
+        sessionMeta(request),
+      );
+      return reply.code(200).send({ token, user: publicUser(user) });
+    },
+  );
 
   app.post(
     '/api/v1/auth/logout',
@@ -459,9 +494,10 @@ export function registerRoutes(
   app.post(
     '/api/v1/ingestion/listings',
     {
-      preHandler: createServiceAuthPreHandler(
-        process.env['INGESTION_SERVICE_TOKEN'],
-      ),
+      preHandler: [
+        rateLimit('ingestion.listings', 100, 60_000),
+        createServiceAuthPreHandler(process.env['INGESTION_SERVICE_TOKEN']),
+      ],
     },
     async (request, reply) => {
       const payload = ingestionPayloadSchema.parse(request.body ?? {});
@@ -548,7 +584,7 @@ export function registerRoutes(
   // ---- Messaging ----
   app.post(
     '/api/v1/conversations',
-    { preHandler: requireAuth },
+    { preHandler: [requireAuth, rateLimit('conversation.create', 30, 60_000)] },
     async (request, reply) => {
       const body = createConversationSchema.parse(request.body ?? {});
       const conversation = await createConversation(
@@ -592,7 +628,7 @@ export function registerRoutes(
 
   app.post(
     '/api/v1/conversations/:id/messages',
-    { preHandler: requireAuth },
+    { preHandler: [requireAuth, rateLimit('messaging.send', 60, 60_000)] },
     async (request, reply) => {
       const { id } = conversationParamsSchema.parse(request.params);
       const body = sendMessageSchema.parse(request.body ?? {});
@@ -728,27 +764,43 @@ export function registerRoutes(
     '/api/v1/owner-alerts',
     { preHandler: requireAuth },
     async (request) => {
-      return { alerts: await listOwnerAlerts(connection, request.user!.id) };
+      const query = ownerAlertListSchema.parse(request.query);
+      const options: { limit?: number; cursor?: string } = {
+        limit: query.limit,
+      };
+      if (query.cursor) {
+        options.cursor = query.cursor;
+      }
+      const result = await listOwnerAlerts(
+        connection,
+        request.user!.id,
+        options,
+      );
+      return { alerts: result.items, nextCursor: result.nextCursor };
     },
   );
 
-  app.post('/api/v1/billing/webhooks/:provider', async (request, reply) => {
-    const { provider: providerName } = webhookParamsSchema.parse(
-      request.params,
-    );
-    if (providerName !== provider.name) {
-      throw new ForbiddenError('provider mismatch');
-    }
-    const signature = request.headers['x-payment-signature'];
-    const result = await handleWebhook(
-      connection,
-      provider,
-      request.body,
-      typeof signature === 'string' ? signature : undefined,
-      enqueueJob,
-    );
-    return reply.code(200).send(result);
-  });
+  app.post(
+    '/api/v1/billing/webhooks/:provider',
+    { preHandler: rateLimit('webhook', 120, 60_000) },
+    async (request, reply) => {
+      const { provider: providerName } = webhookParamsSchema.parse(
+        request.params,
+      );
+      if (providerName !== provider.name) {
+        throw new ForbiddenError('provider mismatch');
+      }
+      const signature = request.headers['x-payment-signature'];
+      const result = await handleWebhook(
+        connection,
+        provider,
+        request.body,
+        typeof signature === 'string' ? signature : undefined,
+        enqueueJob,
+      );
+      return reply.code(200).send(result);
+    },
+  );
 
   // ---- Admin (platform administrator only) ----
   app.get('/api/v1/admin/users', adminPre, async (request) => {

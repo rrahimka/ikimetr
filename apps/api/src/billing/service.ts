@@ -536,20 +536,49 @@ export async function createOwnerAlert(
   return { id: listing.id };
 }
 
+export interface OwnerAlertListOptions {
+  limit?: number;
+  cursor?: string;
+}
+
+export interface OwnerAlertListResult {
+  items: { id: string; listingId: string; createdAt: string }[];
+  nextCursor: string | null;
+}
+
 export async function listOwnerAlerts(
   db: DatabaseConnection,
   userId: string,
-): Promise<{ id: string; listingId: string; createdAt: string }[]> {
+  options: OwnerAlertListOptions = {},
+): Promise<OwnerAlertListResult> {
+  const limit = Math.min(Math.max(options.limit ?? 20, 1), 100);
+  // Stable keyset pagination on (created_at DESC, id DESC). `cursor` is the
+  // `id` of the last item returned on the previous page.
+  const params: unknown[] = [userId, limit + 1];
+  let cursorClause = '';
+  if (options.cursor) {
+    params.push(options.cursor);
+    cursorClause = ` AND id < $3`;
+  }
   const result = await db.transaction(async (tx) => {
     return tx.query<{ id: string; listing_id: string; created_at: string }>(
       `SELECT id, listing_id, created_at FROM app.owner_alerts
-       WHERE user_id = $1 ORDER BY created_at DESC`,
-      [userId],
+       WHERE user_id = $1${cursorClause}
+       ORDER BY id DESC
+       LIMIT $2`,
+      params,
     );
   });
-  return result.rows.map((row) => ({
-    id: row.id,
-    listingId: row.listing_id,
-    createdAt: row.created_at,
-  }));
+  const rows = result.rows;
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const last = page[page.length - 1];
+  return {
+    items: page.map((row) => ({
+      id: row.id,
+      listingId: row.listing_id,
+      createdAt: row.created_at,
+    })),
+    nextCursor: hasMore && last ? last.id : null,
+  };
 }

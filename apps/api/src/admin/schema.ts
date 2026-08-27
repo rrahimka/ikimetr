@@ -1,18 +1,11 @@
 import { z } from '@ikimetr/validation';
 
+// Status is validated per-entity in the admin service (isAllowedStatus), so the
+// schema only constrains it to a non-empty string here. This prevents the
+// previous cross-entity nonsense (e.g. a listing set to "verified").
 export const adminStatusUpdateSchema = z
   .object({
-    status: z.enum([
-      'active',
-      'suspended',
-      'pending',
-      'banned',
-      'inactive',
-      'verified',
-      'unverified',
-      'cancelled',
-      'expired',
-    ]),
+    status: z.string().min(1).max(40),
     reason: z.string().min(1).max(500).optional(),
   })
   .strict();

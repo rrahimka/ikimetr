@@ -1,10 +1,12 @@
 import type { DatabaseConnection } from '@ikimetr/database';
+import { ValidationError } from '../errors.js';
 import type {
   AdminListQuery,
   AdminStatusUpdate,
   AdminSubscriptionOverride,
 } from './schema.js';
 import { writeAudit } from '../audit.js';
+import { isAllowedStatus } from './status.js';
 
 export interface AdminRow {
   id: string;
@@ -232,13 +234,21 @@ async function setStatus(
   idColumn: string,
   id: string,
   status: string,
+  statusColumn: string,
+  entity: string,
   action: string,
   targetType: string,
+  touchUpdatedAt = true,
 ): Promise<AdminRow> {
+  if (!isAllowedStatus(entity, status)) {
+    throw new ValidationError(`status "${status}" is not valid for ${entity}`);
+  }
   const result = await db.transaction(async (tx) => {
     const updated = await tx.query<{ id: string; status: string }>(
-      `UPDATE ${table} SET status = $1, updated_at = now() WHERE ${idColumn} = $2
-       RETURNING ${idColumn} AS id, status`,
+      `UPDATE ${table} SET ${statusColumn} = $1${
+        touchUpdatedAt ? ', updated_at = now()' : ''
+      } WHERE ${idColumn} = $2
+       RETURNING ${idColumn} AS id, ${statusColumn} AS status`,
       [status, id],
     );
     if (updated.rowCount === 0) {
@@ -275,6 +285,8 @@ export async function setUserStatus(
       'id',
       userId,
       input.status,
+      'status',
+      'user',
       'user.status.update',
       'user',
     );
@@ -300,6 +312,8 @@ export async function setRealtorStatus(
       'user_id',
       userId,
       input.status,
+      'status',
+      'realtor',
       'realtor.status.update',
       'realtor',
     );
@@ -325,6 +339,8 @@ export async function setAgencyStatus(
       'id',
       agencyId,
       input.status,
+      'status',
+      'agency',
       'agency.status.update',
       'agency',
     );
@@ -350,6 +366,8 @@ export async function setListingStatus(
       'id',
       listingId,
       input.status,
+      'status',
+      'listing',
       'listing.status.update',
       'listing',
     );
@@ -372,11 +390,14 @@ export async function setExternalListingStatus(
       db,
       actorUserId,
       'app.external_listings',
-      'listing_id',
+      'id',
       listingId,
       input.status,
+      'source_status',
+      'external_listing',
       'external_listing.status.update',
       'external_listing',
+      false,
     );
   } catch (err) {
     if ((err as { code?: string }).code === 'not_found') {
@@ -400,6 +421,8 @@ export async function setRequestStatus(
       'id',
       requestId,
       input.status,
+      'status',
+      'request',
       'request.status.update',
       'request',
     );

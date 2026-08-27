@@ -33,3 +33,12 @@ export const ownerAlertCreateSchema = z
   .strict();
 
 export type OwnerAlertCreateInput = z.infer<typeof ownerAlertCreateSchema>;
+
+export const ownerAlertListSchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+    cursor: z.string().uuid().optional(),
+  })
+  .strict();
+
+export type OwnerAlertListInput = z.infer<typeof ownerAlertListSchema>;
