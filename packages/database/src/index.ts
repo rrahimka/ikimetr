@@ -24,12 +24,20 @@ export function createDatabaseConnection(
     idleTimeoutMillis: 30_000,
     max: 10,
   });
-  // Swallow client-level errors. During teardown (e.g. DROP DATABASE ... WITH
-  // (FORCE) or pg_terminate_backend) idle clients are killed by the server with
-  // a FATAL; without this handler the emitted 'error' becomes an unhandled
-  // rejection that fails the whole test run even though all tests passed.
-  // Optional chaining keeps the mock Pool used by unit tests working.
-  pool.on?.('error', () => {});
+  // Connection-level client errors (e.g. a server-terminated idle client, or a
+  // refused connection). Importantly this does NOT affect query/transaction
+  // errors, which reject via their own promise — those must keep rejecting so
+  // failed queries are never turned into successes and health checks keep
+  // reporting DB failures. Without a handler the 'error' event becomes an
+  // unhandled rejection. We log safely (code only, never the message, which
+  // can contain a connection string with credentials).
+  pool.on?.('error', (error: unknown) => {
+    const code =
+      error instanceof Error
+        ? (error as Error & { code?: string }).code
+        : undefined;
+    console.error(`postgres pool client error: ${code ?? 'unknown'}`);
+  });
   let closed = false;
 
   const assertOpen = (): void => {
