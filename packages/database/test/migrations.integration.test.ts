@@ -121,6 +121,9 @@ describe('database foundation migrations', () => {
           '1786494100000_messaging',
           '1786494200000_notifications',
           '1786494300000_jobs',
+          '1786494400000_billing_core',
+          '1786494500000_audit_log',
+          '1786494600000_seed_plans',
         ]);
         expect(secondRun).toEqual([]);
 
@@ -179,7 +182,7 @@ describe('database foundation migrations', () => {
           GROUP BY role.rolname
         `);
         expect(history.rows).toEqual([
-          { migration_count: '11', owner: 'ikimetr_migrator' },
+          { migration_count: '14', owner: 'ikimetr_migrator' },
         ]);
 
         const roles = await pool.query<{
@@ -225,7 +228,7 @@ describe('database foundation migrations', () => {
           FROM information_schema.tables
           WHERE table_schema IN ('app', 'audit', 'ingestion')
         `);
-        expect(projectTableCount.rows).toEqual([{ count: '20' }]);
+        expect(projectTableCount.rows).toEqual([{ count: '26' }]);
 
         const coreTables = await pool.query<{ name: string }>(`
           SELECT table_name AS name
@@ -246,6 +249,9 @@ describe('database foundation migrations', () => {
           'messages',
           'notification_preferences',
           'notifications',
+          'owner_alerts',
+          'payments',
+          'plans',
           'profiles',
           'properties',
           'property_images',
@@ -253,6 +259,8 @@ describe('database foundation migrations', () => {
           'realtor_profiles',
           'request_matches',
           'sessions',
+          'subscriptions',
+          'user_roles',
           'users',
         ]);
       });
@@ -412,14 +420,14 @@ describe('database foundation migrations', () => {
             ) AS role_count
         `);
         expect(afterDown.rows).toEqual([
-          { history_count: '10', role_count: '3' },
+          { history_count: '13', role_count: '3' },
         ]);
 
         await runTestMigrations(databaseUrl);
         const afterUp = await pool.query<{ count: string }>(`
            SELECT COUNT(*)::text AS count FROM migration.pgmigrations
          `);
-        expect(afterUp.rows).toEqual([{ count: '11' }]);
+        expect(afterUp.rows).toEqual([{ count: '14' }]);
       });
     },
     integrationTimeout,

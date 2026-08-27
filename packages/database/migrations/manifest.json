@@ -44,6 +44,18 @@
     {
       "path": "packages/database/migrations/1786494300000_jobs.ts",
       "sha256": "b62d1707595bdb9e2bc6b6b06de82b4601f9efe3a0bbb83b10de6a5392d844cf"
+    },
+    {
+      "path": "packages/database/migrations/1786494400000_billing_core.ts",
+      "sha256": "ec9e57fdaf4bbed68d048fa8d4b4675be70443586fba33df914f857900e1536b"
+    },
+    {
+      "path": "packages/database/migrations/1786494500000_audit_log.ts",
+      "sha256": "5a8d8ffa5540f1cc95412e8210476b08bf9d79e22487a51bf4d1e69a08658598"
+    },
+    {
+      "path": "packages/database/migrations/1786494600000_seed_plans.ts",
+      "sha256": "a80276d9bee5cd3f9a687780b789545779b4356a74773920aa1b8a45f9bc8aa6"
     }
   ]
 }
