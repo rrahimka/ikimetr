@@ -22,6 +22,39 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     ) sub
     WHERE c.id = sub.conversation_id;
 
+    -- Detect historical duplicate direct pairs BEFORE creating the unique
+    -- index. Aborting here rolls back the whole migration (the column add
+    -- included) so no partial/destructive state is left behind. Manual
+    -- reconciliation (merge or delete the duplicate conversations) is required
+    -- before this migration can be applied on an existing database.
+    DO $$
+    DECLARE
+      v_duplicate_pairs int;
+      v_sample text;
+    BEGIN
+      SELECT count(*) INTO v_duplicate_pairs FROM (
+        SELECT direct_pair_key
+        FROM app.conversations
+        WHERE direct_pair_key IS NOT NULL
+        GROUP BY direct_pair_key
+        HAVING count(*) > 1
+      ) d;
+
+      IF v_duplicate_pairs > 0 THEN
+        SELECT string_agg(direct_pair_key, ', ' ORDER BY direct_pair_key)
+        INTO v_sample FROM (
+          SELECT direct_pair_key
+          FROM app.conversations
+          WHERE direct_pair_key IS NOT NULL
+          GROUP BY direct_pair_key
+          HAVING count(*) > 1
+          LIMIT 5
+        ) s;
+
+        RAISE EXCEPTION 'MIGRATION ABORTED: found % duplicate direct conversation pair(s); sample keys: %. Manual reconciliation required: merge or delete the duplicate direct conversations (same two participants) before applying this migration, then re-run.', v_duplicate_pairs, v_sample;
+      END IF;
+    END $$;
+
     CREATE UNIQUE INDEX app_idx_conversations_direct_pair
       ON app.conversations (direct_pair_key);
   `);

@@ -59,7 +59,7 @@
     },
     {
       "path": "packages/database/migrations/1786494700000_conversation_direct_pair.ts",
-      "sha256": "5b77989261e6bf25c733f81039ebdc30ca01cdc2d36d76b043e670dc213f0ad7"
+      "sha256": "9d8b299c9d239f6cea33cb8ffeaac0d72efc396d8e275f269de3693ed034ce55"
     }
   ]
 }
