@@ -3,10 +3,14 @@ import { loadEnvFile } from 'node:process';
 
 import { createClient } from 'redis';
 
+import { createDatabaseConnection } from '@ikimetr/database';
+
 import {
   getWorkerStartupErrorMessage,
   loadWorkerEnvironment,
 } from './environment.js';
+import { createJobHandlers } from './handlers/index.js';
+import { createJobProcessor } from './job-processor.js';
 import { startHeartbeat } from './heartbeat.js';
 
 function loadLocalEnvironment(): void {
@@ -27,9 +31,19 @@ async function startWorker(): Promise<void> {
   });
   redis.on('error', () => undefined);
 
+  const database = createDatabaseConnection(environment.DATABASE_URL);
+  const processor = createJobProcessor({
+    db: database,
+    redis,
+    handlers: createJobHandlers(),
+    pollTimeoutMs: environment.WORKER_POLL_TIMEOUT_MS,
+    retryCheckIntervalMs: environment.WORKER_RETRY_CHECK_INTERVAL_MS,
+    staleJobMs: environment.WORKER_STALE_JOB_MS,
+  });
+
   const heartbeat = await (async () => {
     try {
-      await redis.connect();
+      await Promise.all([redis.connect(), database.check()]);
       return await startHeartbeat(
         {
           set: async (key, value, options) => redis.set(key, value, options),
@@ -45,24 +59,35 @@ async function startWorker(): Promise<void> {
       if (redis.isOpen) {
         redis.destroy();
       }
+      await database.close();
       throw error;
     }
   })();
 
+  const processing = processor.start();
+
   let closing = false;
-  const shutdown = (): void => {
+  const shutdown = async (): Promise<void> => {
     if (closing) {
       return;
     }
 
     closing = true;
     heartbeat.stop();
+    processor.stop();
+    await database.close().catch(() => undefined);
     redis.destroy();
   };
 
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-    process.once(signal, shutdown);
+    process.once(signal, () => {
+      void shutdown().catch(() => {
+        process.exitCode = 1;
+      });
+    });
   }
+
+  await processing;
 }
 
 startWorker().catch((error: unknown) => {

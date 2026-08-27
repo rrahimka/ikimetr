@@ -11,12 +11,17 @@ const workerEnvironmentSchema = z
   .object({
     NODE_ENV: nodeEnvironmentSchema,
     REDIS_URL: connectionUrlSchema(['redis', 'rediss']),
+    DATABASE_URL: connectionUrlSchema(['postgresql', 'postgres']),
     WORKER_HEARTBEAT_INTERVAL_MS: positiveIntegerSchema.default(5_000),
     WORKER_HEARTBEAT_KEY: z
       .string()
       .regex(/^ikimetr:[a-z0-9][a-z0-9:_-]*$/)
       .default('ikimetr:worker:heartbeat'),
     WORKER_HEARTBEAT_TTL_SECONDS: positiveIntegerSchema.default(15),
+    WORKER_POLL_TIMEOUT_MS: positiveIntegerSchema.default(2_000),
+    WORKER_RETRY_CHECK_INTERVAL_MS: positiveIntegerSchema.default(1_000),
+    WORKER_STALE_JOB_MS: positiveIntegerSchema.default(300_000),
+    WORKER_STALE_LISTING_DAYS: positiveIntegerSchema.default(7),
   })
   .refine(
     (environment) =>
