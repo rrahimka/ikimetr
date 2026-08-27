@@ -258,6 +258,11 @@ export async function getUserFromSession(
   if (!row) {
     return null;
   }
+  // Server-side current account state is the source of truth. A suspended or
+  // banned user must not keep using an already-issued session token.
+  if (row.status !== 'active') {
+    return null;
+  }
   return { id: row.user_id, email: row.email, status: row.status };
 }
 
