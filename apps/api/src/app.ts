@@ -6,10 +6,17 @@ import Fastify from 'fastify';
 import { AppError } from './errors.js';
 import { registerRoutes } from './routes.js';
 
+export type JobEnqueue = (
+  type: string,
+  payload: unknown,
+  idempotencyKey: string,
+) => Promise<void>;
+
 export interface AppDependencies {
   database: HealthProbe;
   redis: HealthProbe;
   connection: DatabaseConnection;
+  enqueueJob?: JobEnqueue;
 }
 
 export interface BuildAppOptions {
@@ -77,7 +84,11 @@ export function buildApp(
     },
   );
 
-  registerRoutes(app, dependencies.connection);
+  registerRoutes(
+    app,
+    dependencies.connection,
+    dependencies.enqueueJob ?? (async () => undefined),
+  );
 
   return app;
 }

@@ -60,6 +60,22 @@ import {
 } from './requests/service.js';
 import { createRequestSchema, updateRequestSchema } from './requests/schema.js';
 import { matchListing, matchRequest } from './matching/service.js';
+import type { JobEnqueue } from './app.js';
+import {
+  conversationParamsSchema,
+  conversationQuerySchema,
+  createConversationSchema,
+  messageQuerySchema,
+  sendMessageSchema,
+} from './messaging/schema.js';
+import {
+  createConversation,
+  getConversation,
+  listConversations,
+  listMessages,
+  markConversationRead,
+  sendMessage,
+} from './messaging/service.js';
 
 function publicUser(user: AuthUser) {
   return { id: user.id, email: user.email, status: user.status };
@@ -68,6 +84,7 @@ function publicUser(user: AuthUser) {
 export function registerRoutes(
   app: FastifyInstance,
   connection: DatabaseConnection,
+  enqueueJob: JobEnqueue,
 ): void {
   const requireAuth = createAuthPreHandler(connection);
 
@@ -440,6 +457,78 @@ export function registerRoutes(
       return matchListing(connection, id, request.user!.id);
     },
   );
+
+  // ---- Messaging ----
+  app.post(
+    '/api/v1/conversations',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const body = createConversationSchema.parse(request.body ?? {});
+      const conversation = await createConversation(
+        connection,
+        request.user!.id,
+        body.withUserId,
+      );
+      return reply.code(201).send({ conversation });
+    },
+  );
+
+  app.get(
+    '/api/v1/conversations',
+    { preHandler: requireAuth },
+    async (request) => {
+      const query = conversationQuerySchema.parse(request.query ?? {});
+      return listConversations(connection, request.user!.id, query);
+    },
+  );
+
+  app.get(
+    '/api/v1/conversations/:id',
+    { preHandler: requireAuth },
+    async (request) => {
+      const { id } = conversationParamsSchema.parse(request.params);
+      return {
+        conversation: await getConversation(connection, id, request.user!.id),
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/conversations/:id/messages',
+    { preHandler: requireAuth },
+    async (request) => {
+      const { id } = conversationParamsSchema.parse(request.params);
+      const query = messageQuerySchema.parse(request.query ?? {});
+      return listMessages(connection, id, request.user!.id, query);
+    },
+  );
+
+  app.post(
+    '/api/v1/conversations/:id/messages',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { id } = conversationParamsSchema.parse(request.params);
+      const body = sendMessageSchema.parse(request.body ?? {});
+      const message = await sendMessage(
+        connection,
+        id,
+        request.user!.id,
+        body,
+        enqueueJob,
+      );
+      return reply.code(201).send({ message });
+    },
+  );
+
+  app.post(
+    '/api/v1/conversations/:id/read',
+    { preHandler: requireAuth },
+    async (request) => {
+      const { id } = conversationParamsSchema.parse(request.params);
+      return markConversationRead(connection, id, request.user!.id);
+    },
+  );
+
 }
 
 function sessionMeta(request: {
