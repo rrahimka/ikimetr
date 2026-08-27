@@ -43,6 +43,41 @@ export function buildApp(
 ) {
   const app = Fastify({ logger: options.logger ?? false });
 
+  const corsAllowList = (process.env['API_CORS_ORIGINS'] ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  app.addHook('onRequest', async (request, reply) => {
+    const origin = request.headers['origin'];
+    if (origin && corsAllowList.length > 0 && corsAllowList.includes(origin)) {
+      reply
+        .header('access-control-allow-origin', origin)
+        .header('vary', 'origin')
+        .header('access-control-allow-credentials', 'true')
+        .header(
+          'access-control-allow-methods',
+          'GET,POST,PATCH,PUT,DELETE,OPTIONS',
+        )
+        .header('access-control-allow-headers', 'authorization,content-type');
+    }
+    if (request.method === 'OPTIONS') {
+      reply.code(204).send();
+    }
+  });
+
+  app.addHook('onSend', (_request, reply, payload, done) => {
+    reply
+      .header('x-content-type-options', 'nosniff')
+      .header('x-frame-options', 'DENY')
+      .header('referrer-policy', 'no-referrer')
+      .header(
+        'content-security-policy',
+        "default-src 'none'; frame-ancestors 'none'",
+      );
+    done(null, payload);
+  });
+
   app.setErrorHandler((error: unknown, _request, reply) => {
     if (error instanceof AppError) {
       return reply
