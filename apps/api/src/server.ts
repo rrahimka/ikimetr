@@ -10,6 +10,7 @@ import {
   loadApiEnvironment,
 } from './environment.js';
 import { createRedisHealthConnection } from './redis.js';
+import { createPaymentProvider } from './billing/provider.js';
 
 const JOB_MAX_ATTEMPTS = 5;
 
@@ -49,8 +50,9 @@ async function startApi(): Promise<void> {
   const database = createDatabaseConnection(environment.DATABASE_URL);
   const redis = createRedisHealthConnection(environment.REDIS_URL);
   const enqueueJob = createJobEnqueue(database, redis);
+  const paymentProvider = createPaymentProvider(environment);
   const app = buildApp(
-    { database, redis, connection: database, enqueueJob },
+    { database, redis, connection: database, enqueueJob, paymentProvider },
     { logger: true },
   );
 

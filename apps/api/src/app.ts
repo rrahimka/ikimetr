@@ -4,6 +4,7 @@ import { z } from '@ikimetr/validation';
 import Fastify from 'fastify';
 
 import { AppError } from './errors.js';
+import type { PaymentProvider } from './billing/provider.js';
 import { registerRoutes } from './routes.js';
 
 export type JobEnqueue = (
@@ -17,6 +18,7 @@ export interface AppDependencies {
   redis: HealthProbe;
   connection: DatabaseConnection;
   enqueueJob?: JobEnqueue;
+  paymentProvider?: PaymentProvider;
 }
 
 export interface BuildAppOptions {
@@ -55,9 +57,15 @@ export function buildApp(
         .code(400)
         .send({ error: 'validation_error', message: detail });
     }
-    return reply
-      .code(500)
-      .send({ error: 'internal_error', message: 'internal server error' });
+    return reply.code(500).send({
+      error: 'internal_error',
+      message:
+        process.env['NODE_ENV'] === 'production'
+          ? 'internal server error'
+          : error instanceof Error
+            ? error.message
+            : 'internal server error',
+    });
   });
 
   app.get<{ Reply: HealthResponse }>(
@@ -88,6 +96,7 @@ export function buildApp(
     app,
     dependencies.connection,
     dependencies.enqueueJob ?? (async () => undefined),
+    dependencies.paymentProvider,
   );
 
   return app;

@@ -107,7 +107,9 @@ export interface TestContext {
   redisHealth: HealthProbe;
 }
 
-export async function setupTestContext(): Promise<TestContext> {
+export async function setupTestContext(
+  enqueueJob?: AppDependencies['enqueueJob'],
+): Promise<TestContext> {
   const database = await createTestDatabase();
   await migrateDatabase(database.databaseUrl);
   const connection = createDatabaseConnection(database.databaseUrl);
@@ -116,8 +118,9 @@ export async function setupTestContext(): Promise<TestContext> {
     database: connection,
     redis: redisHealth,
     connection,
+    ...(enqueueJob === undefined ? {} : { enqueueJob }),
   };
-  const app = buildApp(dependencies);
+  const app = buildApp(dependencies, { logger: true });
   await app.ready();
   return { app, connection, database, redisHealth };
 }

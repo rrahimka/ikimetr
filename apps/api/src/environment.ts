@@ -14,6 +14,8 @@ const apiEnvironmentSchema = z.object({
   NODE_ENV: nodeEnvironmentSchema,
   REDIS_URL: connectionUrlSchema(['redis', 'rediss']),
   INGESTION_SERVICE_TOKEN: z.string().min(16).optional(),
+  PAYMENT_PROVIDER: z.enum(['test', 'stripe', 'epoint']).default('test'),
+  PAYMENT_PROVIDER_SECRET: z.string().min(1).optional(),
 });
 
 export type ApiEnvironment = z.infer<typeof apiEnvironmentSchema>;

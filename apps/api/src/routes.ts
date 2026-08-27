@@ -5,6 +5,49 @@ import { ForbiddenError, UnauthenticatedError } from './errors.js';
 import { createAuthPreHandler, extractToken } from './guard.js';
 import { canEditProperty, type AgencyMembership } from './authz.js';
 import type { AuthUser } from './identity/service.js';
+import type { PaymentProvider } from './billing/provider.js';
+import {
+  DEFAULT_TEST_SECRET,
+  HmacPaymentProvider,
+} from './billing/provider.js';
+import { requirePlatformAdmin } from './admin/guard.js';
+import {
+  adminListQuerySchema,
+  adminStatusUpdateSchema,
+  adminSubscriptionOverrideSchema,
+} from './admin/schema.js';
+import {
+  createCheckout,
+  createOwnerAlert,
+  getEntitlements,
+  getMySubscription,
+  handleWebhook,
+  listOwnerAlerts,
+  listPlans,
+} from './billing/service.js';
+import {
+  createCheckoutSchema,
+  ownerAlertCreateSchema,
+  webhookParamsSchema,
+} from './billing/schema.js';
+import {
+  getAuditLog,
+  listAgencies,
+  listExternalListings,
+  listListings,
+  listRealtors,
+  listRequests as adminListRequests,
+  listSubscriptions,
+  listUsers,
+  overrideSubscription,
+  setAgencyStatus,
+  setExternalListingStatus,
+  setListingStatus,
+  setRealtorStatus,
+  setRequestStatus,
+  setUserStatus,
+} from './admin/service.js';
+import { getPlatformAnalytics } from './analytics/service.js';
 import {
   addAgencyMember,
   authenticateUser,
@@ -96,8 +139,41 @@ export function registerRoutes(
   app: FastifyInstance,
   connection: DatabaseConnection,
   enqueueJob: JobEnqueue,
+  paymentProvider?: PaymentProvider,
 ): void {
   const requireAuth = createAuthPreHandler(connection);
+  const provider: PaymentProvider =
+    paymentProvider ??
+    new HmacPaymentProvider(
+      {
+        name: 'test',
+        eventTypeMap: (raw) => {
+          const type = raw['type'];
+          if (type === 'checkout.completed' || type === 'payment.succeeded') {
+            return 'payment.succeeded';
+          }
+          if (type === 'subscription.cancelled') {
+            return 'subscription.cancelled';
+          }
+          if (type === 'subscription.expired') {
+            return 'subscription.expired';
+          }
+          return 'unknown';
+        },
+      },
+      DEFAULT_TEST_SECRET,
+    );
+
+  const requirePlatformAdminPre = async (request: {
+    user?: AuthUser;
+  }): Promise<void> => {
+    if (!request.user) {
+      throw new UnauthenticatedError('authentication required');
+    }
+    await requirePlatformAdmin(connection, request.user.id);
+  };
+
+  const adminPre = { preHandler: [requireAuth, requirePlatformAdminPre] };
 
   const membershipFor = async (
     agencyId: string | null,
@@ -592,6 +668,233 @@ export function registerRoutes(
       };
     },
   );
+
+  // ---- Billing ----
+  app.get('/api/v1/billing/plans', async () => {
+    return { plans: await listPlans(connection) };
+  });
+
+  app.get(
+    '/api/v1/billing/subscription',
+    { preHandler: requireAuth },
+    async (request) => {
+      return {
+        subscription: await getMySubscription(connection, request.user!.id),
+        entitlements: await getEntitlements(connection, request.user!.id),
+      };
+    },
+  );
+
+  app.post(
+    '/api/v1/billing/checkout',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const body = createCheckoutSchema.parse(request.body ?? {});
+      const result = await createCheckout(
+        connection,
+        provider,
+        request.user!.id,
+        body.planCode,
+      );
+      return reply.code(200).send(result);
+    },
+  );
+
+  app.get(
+    '/api/v1/me/entitlements',
+    { preHandler: requireAuth },
+    async (request) => {
+      return {
+        entitlements: await getEntitlements(connection, request.user!.id),
+      };
+    },
+  );
+
+  app.post(
+    '/api/v1/owner-alerts',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const body = ownerAlertCreateSchema.parse(request.body ?? {});
+      const result = await createOwnerAlert(
+        connection,
+        request.user!.id,
+        body.listingId,
+      );
+      return reply.code(201).send(result);
+    },
+  );
+
+  app.get(
+    '/api/v1/owner-alerts',
+    { preHandler: requireAuth },
+    async (request) => {
+      return { alerts: await listOwnerAlerts(connection, request.user!.id) };
+    },
+  );
+
+  app.post('/api/v1/billing/webhooks/:provider', async (request, reply) => {
+    const { provider: providerName } = webhookParamsSchema.parse(
+      request.params,
+    );
+    if (providerName !== provider.name) {
+      throw new ForbiddenError('provider mismatch');
+    }
+    const signature = request.headers['x-payment-signature'];
+    const result = await handleWebhook(
+      connection,
+      provider,
+      request.body,
+      typeof signature === 'string' ? signature : undefined,
+      enqueueJob,
+    );
+    return reply.code(200).send(result);
+  });
+
+  // ---- Admin (platform administrator only) ----
+  app.get('/api/v1/admin/users', adminPre, async (request) => {
+    const query = adminListQuerySchema.parse(request.query ?? {});
+    return { users: await listUsers(connection, query) };
+  });
+
+  app.patch(
+    '/api/v1/admin/users/:id/status',
+    adminPre,
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const body = adminStatusUpdateSchema.parse(request.body ?? {});
+      const row = await setUserStatus(connection, request.user!.id, id, body);
+      return reply.send(row);
+    },
+  );
+
+  app.get('/api/v1/admin/realtors', adminPre, async (request) => {
+    const query = adminListQuerySchema.parse(request.query ?? {});
+    return { realtors: await listRealtors(connection, query) };
+  });
+
+  app.patch(
+    '/api/v1/admin/realtors/:id/status',
+    adminPre,
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const body = adminStatusUpdateSchema.parse(request.body ?? {});
+      const row = await setRealtorStatus(
+        connection,
+        request.user!.id,
+        id,
+        body,
+      );
+      return reply.send(row);
+    },
+  );
+
+  app.get('/api/v1/admin/agencies', adminPre, async (request) => {
+    const query = adminListQuerySchema.parse(request.query ?? {});
+    return { agencies: await listAgencies(connection, query) };
+  });
+
+  app.patch(
+    '/api/v1/admin/agencies/:id/status',
+    adminPre,
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const body = adminStatusUpdateSchema.parse(request.body ?? {});
+      const row = await setAgencyStatus(connection, request.user!.id, id, body);
+      return reply.send(row);
+    },
+  );
+
+  app.get('/api/v1/admin/listings', adminPre, async (request) => {
+    const query = adminListQuerySchema.parse(request.query ?? {});
+    return { listings: await listListings(connection, query) };
+  });
+
+  app.patch(
+    '/api/v1/admin/listings/:id/status',
+    adminPre,
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const body = adminStatusUpdateSchema.parse(request.body ?? {});
+      const row = await setListingStatus(
+        connection,
+        request.user!.id,
+        id,
+        body,
+      );
+      return reply.send(row);
+    },
+  );
+
+  app.get('/api/v1/admin/external-listings', adminPre, async (request) => {
+    const query = adminListQuerySchema.parse(request.query ?? {});
+    return { externalListings: await listExternalListings(connection, query) };
+  });
+
+  app.patch(
+    '/api/v1/admin/external-listings/:id/status',
+    adminPre,
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const body = adminStatusUpdateSchema.parse(request.body ?? {});
+      const row = await setExternalListingStatus(
+        connection,
+        request.user!.id,
+        id,
+        body,
+      );
+      return reply.send(row);
+    },
+  );
+
+  app.get('/api/v1/admin/requests', adminPre, async (request) => {
+    const query = adminListQuerySchema.parse(request.query ?? {});
+    return { requests: await adminListRequests(connection, query) };
+  });
+
+  app.patch(
+    '/api/v1/admin/requests/:id/status',
+    adminPre,
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const body = adminStatusUpdateSchema.parse(request.body ?? {});
+      const row = await setRequestStatus(
+        connection,
+        request.user!.id,
+        id,
+        body,
+      );
+      return reply.send(row);
+    },
+  );
+
+  app.get('/api/v1/admin/subscriptions', adminPre, async (request) => {
+    const query = adminListQuerySchema.parse(request.query ?? {});
+    return { subscriptions: await listSubscriptions(connection, query) };
+  });
+
+  app.post(
+    '/api/v1/admin/subscriptions/override',
+    adminPre,
+    async (request, reply) => {
+      const body = adminSubscriptionOverrideSchema.parse(request.body ?? {});
+      const row = await overrideSubscription(
+        connection,
+        request.user!.id,
+        body,
+      );
+      return reply.code(200).send(row);
+    },
+  );
+
+  app.get('/api/v1/admin/audit', adminPre, async (request) => {
+    const query = adminListQuerySchema.parse(request.query ?? {});
+    return { audit: await getAuditLog(connection, query) };
+  });
+
+  // ---- Analytics (platform administrator only) ----
+  app.get('/api/v1/analytics', adminPre, async () => {
+    return { analytics: await getPlatformAnalytics(connection) };
+  });
 }
 
 function sessionMeta(request: {
