@@ -32,6 +32,18 @@
     {
       "path": "packages/database/migrations/1786492960000_phone_hash_width.ts",
       "sha256": "6ebf24991f370d798de5979a19ef8ed5139e4ae10964ae1533790f608c02865e"
+    },
+    {
+      "path": "packages/database/migrations/1786494100000_messaging.ts",
+      "sha256": "42971ce963d3c7a7d9491670f14ee3cbb6ef32261e619fe5f8059acc7b989c2a"
+    },
+    {
+      "path": "packages/database/migrations/1786494200000_notifications.ts",
+      "sha256": "7b4fb8030de6ce6960f4aa14476394f6209a6165bf480a11a3297f5fba651637"
+    },
+    {
+      "path": "packages/database/migrations/1786494300000_jobs.ts",
+      "sha256": "b62d1707595bdb9e2bc6b6b06de82b4601f9efe3a0bbb83b10de6a5392d844cf"
     }
   ]
 }
