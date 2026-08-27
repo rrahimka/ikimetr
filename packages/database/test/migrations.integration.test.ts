@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 import { PG_MIGRATE_LOCK_ID } from 'node-pg-migrate';
@@ -445,6 +446,64 @@ describe('database foundation migrations', () => {
       );
       expect(result.output).not.toContain('ECONNREFUSED');
       expect(result.output).not.toContain('not_used');
+    },
+    integrationTimeout,
+  );
+
+  it(
+    'aborts on historical duplicate direct conversations instead of failing opaquely',
+    async () => {
+      await withDisposableDatabase(async ({ databaseUrl, pool }) => {
+        // Apply every migration except the final direct-pair one.
+        const applied = await runTestMigrations(databaseUrl, { count: 14 });
+        expect(applied).toHaveLength(14);
+
+        // Seed two distinct direct conversations that share the SAME pair of
+        // participants — a historical duplicate that the unique index would
+        // reject.
+        const u1 = randomUUID();
+        const u2 = randomUUID();
+        const c1 = randomUUID();
+        const c2 = randomUUID();
+        await pool.query(
+          `INSERT INTO app.users (id, status) VALUES ($1, 'active'), ($2, 'active')`,
+          [u1, u2],
+        );
+        await pool.query(
+          `INSERT INTO app.conversations (id, conversation_type)
+           VALUES ($1, 'direct'), ($2, 'direct')`,
+          [c1, c2],
+        );
+        await pool.query(
+          `INSERT INTO app.conversation_participants (conversation_id, user_id)
+           VALUES ($1, $2), ($1, $3), ($4, $2), ($4, $3)`,
+          [c1, u1, u2, c2],
+        );
+
+        // Applying the final migration must abort with an actionable error and
+        // roll back (no partial column / no index), not fail with a generic
+        // unique-index violation.
+        await expect(runTestMigrations(databaseUrl)).rejects.toThrow(
+          'MIGRATION ABORTED',
+        );
+
+        const indexRows = await pool.query<{ indexname: string }>(
+          `SELECT indexname FROM pg_indexes WHERE indexname = 'app_idx_conversations_direct_pair'`,
+        );
+        expect(indexRows.rowCount).toBe(0);
+
+        const columnRows = await pool.query<{ column_name: string }>(
+          `SELECT column_name FROM information_schema.columns
+           WHERE table_schema = 'app' AND table_name = 'conversations'
+             AND column_name = 'direct_pair_key'`,
+        );
+        expect(columnRows.rowCount).toBe(0);
+
+        const history = await pool.query<{ count: string }>(
+          `SELECT COUNT(*)::text AS count FROM migration.pgmigrations`,
+        );
+        expect(history.rows).toEqual([{ count: '14' }]);
+      });
     },
     integrationTimeout,
   );
