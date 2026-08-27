@@ -81,7 +81,15 @@ async function startApi(): Promise<void> {
     }
 
     closing = true;
-    await app.close();
+    process.stderr.write('SHUTDOWN: received signal, closing app\n');
+    try {
+      await app.close();
+      process.stderr.write('SHUTDOWN: app closed, exiting 0\n');
+      process.exit(0);
+    } catch (error) {
+      process.stderr.write(`SHUTDOWN: close error ${String(error)}\n`);
+      process.exit(1);
+    }
   };
 
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
@@ -95,5 +103,9 @@ async function startApi(): Promise<void> {
 
 startApi().catch((error: unknown) => {
   console.error(getApiStartupErrorMessage(error));
+  const code = error instanceof Error ? (error as Error & { code?: string }).code : undefined;
+  if (code) {
+    console.error(`Startup error code: ${code}`);
+  }
   process.exitCode = 1;
 });

@@ -29,5 +29,8 @@ export function getApiStartupErrorMessage(error: unknown): string {
     return error.message;
   }
 
+  // Intentionally generic: the real error may contain secrets (e.g. a
+  // connection string with credentials), so it must not be echoed here. The
+  // safe, non-sensitive error code is logged separately by the caller.
   return 'API startup failed';
 }
