@@ -1,5 +1,6 @@
 import type { HealthProbe, HealthResponse } from '@ikimetr/shared';
 import type { DatabaseConnection } from '@ikimetr/database';
+import type { RedisClientType } from 'redis';
 import { z } from '@ikimetr/validation';
 import Fastify from 'fastify';
 
@@ -19,6 +20,7 @@ export interface AppDependencies {
   connection: DatabaseConnection;
   enqueueJob?: JobEnqueue;
   paymentProvider?: PaymentProvider;
+  rateLimitRedis?: RedisClientType;
 }
 
 export interface BuildAppOptions {
@@ -132,7 +134,16 @@ export function buildApp(
     dependencies.connection,
     dependencies.enqueueJob ?? (async () => undefined),
     dependencies.paymentProvider,
+    dependencies.rateLimitRedis,
   );
+
+  if (dependencies.rateLimitRedis) {
+    app.addHook('onReady', async () => {
+      if (!dependencies.rateLimitRedis!.isOpen) {
+        await dependencies.rateLimitRedis!.connect();
+      }
+    });
+  }
 
   return app;
 }
