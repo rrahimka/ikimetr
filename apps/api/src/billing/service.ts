@@ -265,6 +265,12 @@ export async function createCheckout(
     currency: plan.currency,
   });
 
+  // Payment ledger model: `createCheckout` records ONE "payment intent" row
+  // (provider_payment_id = X, provider_event_id = NULL, status 'pending'). The
+  // webhook later records ONE "payment event" row keyed by provider_event_id
+  // (idempotent). These two rows have distinct business meaning (intent vs
+  // settled event) and are both intentional. The subscription row carries
+  // provider_payment_id and is the source of truth for entitlements.
   await db.transaction(async (tx) => {
     const existing = await tx.query<{ id: string }>(
       `SELECT id FROM app.payments
@@ -330,6 +336,9 @@ export async function handleWebhook(
     const userId =
       subLookup.rows[0]?.user_id ?? '00000000-0000-0000-0000-000000000000';
 
+    // Record the settled "payment event" ledger row, idempotent on
+    // (provider, provider_event_id). This is a separate business record from
+    // the checkout intent row created in `createCheckout`.
     const insert = await tx.query<{ id: string }>(
       `INSERT INTO app.payments (user_id, provider, provider_payment_id, provider_event_id, status, raw_event)
        VALUES ($1, $2, $3, $4, 'received', $5)
@@ -417,12 +426,6 @@ async function applyPaymentSucceeded(
     `UPDATE app.payments SET status = 'succeeded', updated_at = now()
      WHERE provider = $1 AND provider_payment_id = $2`,
     [provider.name, event.paymentId ?? event.id],
-  );
-  await tx.query(
-    `INSERT INTO app.payments (user_id, provider, provider_event_id, subscription_id, status)
-     VALUES ($1, $2, $3, $4, 'succeeded')
-     ON CONFLICT (provider, provider_event_id) DO NOTHING`,
-    [sub.user_id, provider.name, `${event.id}:applied`, sub.id],
   );
   await enqueueJob(
     'notification.deliver',
