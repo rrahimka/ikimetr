@@ -9,9 +9,11 @@ import {
   type DatabaseConnection,
 } from '@ikimetr/database';
 import type { HealthProbe } from '@ikimetr/shared';
+import type { RedisClientType } from 'redis';
 
 import { buildApp } from '../src/app.js';
 import type { AppDependencies } from '../src/app.js';
+import { createRedisClient } from '../src/redis.js';
 
 const repositoryRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const migrationsDir = resolve(repositoryRoot, 'packages/database/migrations');
@@ -121,29 +123,38 @@ export interface TestContext {
   connection: DatabaseConnection;
   database: TestDatabase;
   redisHealth: HealthProbe;
+  rateLimitRedis?: RedisClientType | undefined;
 }
 
 export async function setupTestContext(
   enqueueJob?: AppDependencies['enqueueJob'],
+  withRateLimitRedis = false,
 ): Promise<TestContext> {
   const database = await createTestDatabase();
   await migrateDatabase(database.databaseUrl);
   const connection = createDatabaseConnection(database.databaseUrl);
   const redisHealth: HealthProbe = { check: async () => undefined };
+  const rateLimitRedis = withRateLimitRedis
+    ? createRedisClient(process.env['REDIS_URL'] ?? 'redis://127.0.0.1:6379')
+    : undefined;
   const dependencies: AppDependencies = {
     database: connection,
     redis: redisHealth,
     connection,
     ...(enqueueJob === undefined ? {} : { enqueueJob }),
+    ...(rateLimitRedis === undefined ? {} : { rateLimitRedis }),
   };
   const app = buildApp(dependencies, { logger: true });
   await app.ready();
-  return { app, connection, database, redisHealth };
+  return { app, connection, database, redisHealth, rateLimitRedis };
 }
 
 export async function teardownTestContext(ctx: TestContext): Promise<void> {
   await ctx.app.close();
   await ctx.connection.close();
+  if (ctx.rateLimitRedis?.isOpen) {
+    await ctx.rateLimitRedis.destroy();
+  }
   await dropTestDatabase(ctx.database);
 }
 
