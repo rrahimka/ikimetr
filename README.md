@@ -2,7 +2,10 @@
 
 İkiMetr is a realtor-first workspace. The repository contains a Next.js web
 app, Fastify API, independent worker, PostgreSQL/PostGIS, Redis, and the
-database migration foundation. No business database tables exist yet.
+database migration foundation. The schema already includes business tables
+(users, realtor/agency profiles, properties and marketplace listings, client
+requests, conversations/messages, billing subscriptions/payments, owner alerts,
+auditing, and the durable job queue).
 
 ## Prerequisites
 
