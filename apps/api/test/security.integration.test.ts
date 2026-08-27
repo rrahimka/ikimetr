@@ -61,9 +61,26 @@ describe('production payment provider safety', () => {
     ).toThrow(/production/);
   });
 
-  it('allows an explicit provider with a secret in production', () => {
+  it('fails fast for stripe/epoint in production (no real integration)', () => {
+    expect(() =>
+      createPaymentProvider({
+        NODE_ENV: 'production',
+        PAYMENT_PROVIDER: 'stripe',
+        PAYMENT_PROVIDER_SECRET: 'super-secret',
+      }),
+    ).toThrow(/no production integration/i);
+    expect(() =>
+      createPaymentProvider({
+        NODE_ENV: 'production',
+        PAYMENT_PROVIDER: 'epoint',
+        PAYMENT_PROVIDER_SECRET: 'super-secret',
+      }),
+    ).toThrow(/no production integration/i);
+  });
+
+  it('allows stripe/epoint only as a sandbox adapter outside production', () => {
     const provider = createPaymentProvider({
-      NODE_ENV: 'production',
+      NODE_ENV: 'development',
       PAYMENT_PROVIDER: 'stripe',
       PAYMENT_PROVIDER_SECRET: 'super-secret',
     });
@@ -73,7 +90,7 @@ describe('production payment provider safety', () => {
   it('rejects an explicit provider without a secret', () => {
     expect(() =>
       createPaymentProvider({
-        NODE_ENV: 'production',
+        NODE_ENV: 'development',
         PAYMENT_PROVIDER: 'stripe',
       }),
     ).toThrow(/secret/i);

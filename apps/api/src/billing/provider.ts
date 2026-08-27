@@ -55,7 +55,7 @@ export function signPayload(payload: unknown, secret: string): string {
   return sign(payload, secret);
 }
 
-export class HmacPaymentProvider implements PaymentProvider {
+export class SandboxPaymentProvider implements PaymentProvider {
   readonly name: string;
   private readonly secret: string;
   private readonly eventTypeMap: (
@@ -71,9 +71,12 @@ export class HmacPaymentProvider implements PaymentProvider {
   async createCheckout(_input: CheckoutInput): Promise<CheckoutResult> {
     void _input;
     const providerPaymentId = `pay_${this.name}_${randomUUID()}`;
+    // This is a sandbox/HMAC adapter only; it does NOT integrate with a real
+    // payment gateway. The checkout URL is a non-functional stub used for local
+    // development and tests. Production callers must not reach this path.
     return {
       providerPaymentId,
-      checkoutUrl: `https://${this.name}.example/checkout/${providerPaymentId}`,
+      checkoutUrl: `https://${this.name}.sandbox.example/checkout/${providerPaymentId}`,
     };
   }
 
@@ -188,7 +191,7 @@ export function createPaymentProvider(
         'test payment provider must not be enabled in production',
       );
     }
-    return new HmacPaymentProvider(
+    return new SandboxPaymentProvider(
       { name: 'test', eventTypeMap: TEST_EVENT_MAP },
       secret,
     );
@@ -201,7 +204,15 @@ export function createPaymentProvider(
   }
 
   if (name === 'stripe' || name === 'epoint') {
-    return new HmacPaymentProvider(
+    // The HMAC provider is a sandbox/webhook-signature adapter only. There is
+    // no real gateway integration, so we must not pretend checkout works in
+    // production. Allow it for local/non-production testing; fail fast in prod.
+    if (environment.NODE_ENV === 'production') {
+      throw new Error(
+        `payment provider "${name}" has no production integration configured`,
+      );
+    }
+    return new SandboxPaymentProvider(
       { name, eventTypeMap: STRIPE_EVENT_MAP },
       environment.PAYMENT_PROVIDER_SECRET,
     );
