@@ -59,6 +59,7 @@ export interface JobProcessor {
   processOne(jobId: string): Promise<void>;
   recoverStale(): Promise<void>;
   runScheduler(): Promise<void>;
+  requeuePending(): Promise<number>;
 }
 
 export function createJobProcessor(options: JobProcessorOptions): JobProcessor {
@@ -84,6 +85,33 @@ export function createJobProcessor(options: JobProcessorOptions): JobProcessor {
     for (const row of stale.rows) {
       await enqueueJob(redis, row.id);
     }
+  }
+
+  async function requeuePending(): Promise<number> {
+    // Re-enqueue durable `queued` jobs that were never claimed (e.g. the Redis
+    // push after the DB insert failed, or was lost). The DB row is the source
+    // of truth; this makes delivery eventually consistent. A job claimed by the
+    // poll loop flips to `processing`, so it won't be re-selected next cycle.
+    const rows = await db.transaction((tx) =>
+      tx.query<{ id: string }>(
+        `SELECT id FROM app.jobs
+         WHERE status = 'queued'
+           AND updated_at < now() - ($1 * interval '1 millisecond')
+         FOR UPDATE SKIP LOCKED
+         LIMIT 500`,
+        [staleJobMs],
+      ),
+    );
+    let requeued = 0;
+    for (const row of rows.rows) {
+      try {
+        await enqueueJob(redis, row.id);
+        requeued += 1;
+      } catch {
+        // Keep in DB; retried next cycle.
+      }
+    }
+    return requeued;
   }
 
   async function processOne(jobId: string): Promise<void> {
@@ -194,8 +222,10 @@ export function createJobProcessor(options: JobProcessorOptions): JobProcessor {
     running = true;
     stopping = false;
     await recoverStale();
+    await requeuePending();
     const scheduler = setInterval(() => {
       void runScheduler().catch(() => undefined);
+      void requeuePending().catch(() => undefined);
     }, retryCheckIntervalMs);
 
     while (!stopping) {
@@ -218,5 +248,12 @@ export function createJobProcessor(options: JobProcessorOptions): JobProcessor {
     stopping = true;
   }
 
-  return { start, stop, processOne, recoverStale, runScheduler };
+  return {
+    start,
+    stop,
+    processOne,
+    recoverStale,
+    runScheduler,
+    requeuePending,
+  };
 }

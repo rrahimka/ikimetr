@@ -26,7 +26,7 @@ async function startWorker(): Promise<void> {
     url: environment.REDIS_URL,
     socket: {
       connectTimeout: 5_000,
-      reconnectStrategy: false,
+      reconnectStrategy: (retries) => Math.min(retries * 200, 5_000),
     },
   });
   redis.on('error', () => undefined);
