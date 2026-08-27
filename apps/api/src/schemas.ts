@@ -91,6 +91,27 @@ const RENOVATIONS = [
   'after_construction',
 ];
 
+export const SELLER_TYPES = ['owner', 'realtor', 'agency', 'unknown'];
+export const PROPERTY_TYPES = [
+  'apartment',
+  'house',
+  'room',
+  'land',
+  'commercial',
+  'garage',
+  'office',
+  'villa',
+  'cottage',
+  'new_building',
+];
+export const LISTING_STATUSES = ['active', 'outdated', 'archived'];
+export const FRESHNESS_STATUSES = ['confirmed', 'stale', 'inactive'];
+export const REQUEST_STATUSES = ['active', 'archived', 'expired'];
+
+export const TRANSACTION_TYPE_VALUES = TRANSACTION_TYPES;
+export const CURRENCY_VALUES = CURRENCIES;
+export const RENOVATION_VALUES = RENOVATIONS;
+
 export const createPropertySchema = z.object({
   agencyId: z.string().uuid().optional(),
   transactionType: z

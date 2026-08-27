@@ -13,6 +13,7 @@ const apiEnvironmentSchema = z.object({
   DATABASE_URL: connectionUrlSchema(['postgres', 'postgresql']),
   NODE_ENV: nodeEnvironmentSchema,
   REDIS_URL: connectionUrlSchema(['redis', 'rediss']),
+  INGESTION_SERVICE_TOKEN: z.string().min(16).optional(),
 });
 
 export type ApiEnvironment = z.infer<typeof apiEnvironmentSchema>;
