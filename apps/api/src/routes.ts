@@ -76,6 +76,17 @@ import {
   markConversationRead,
   sendMessage,
 } from './messaging/service.js';
+import {
+  notificationParamsSchema,
+  notificationQuerySchema,
+  updatePreferencesSchema,
+} from './notifications/schema.js';
+import {
+  getNotificationPreferences,
+  listNotifications,
+  markNotificationRead,
+  updateNotificationPreferences,
+} from './notifications/service.js';
 
 function publicUser(user: AuthUser) {
   return { id: user.id, email: user.email, status: user.status };
@@ -529,6 +540,58 @@ export function registerRoutes(
     },
   );
 
+  // ---- Notifications ----
+  app.get(
+    '/api/v1/notifications',
+    { preHandler: requireAuth },
+    async (request) => {
+      const query = notificationQuerySchema.parse(request.query ?? {});
+      return listNotifications(connection, request.user!.id, query);
+    },
+  );
+
+  app.post(
+    '/api/v1/notifications/:id/read',
+    { preHandler: requireAuth },
+    async (request) => {
+      const { id } = notificationParamsSchema.parse(request.params);
+      return {
+        notification: await markNotificationRead(
+          connection,
+          id,
+          request.user!.id,
+        ),
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/notification-preferences',
+    { preHandler: requireAuth },
+    async (request) => {
+      return {
+        preferences: await getNotificationPreferences(
+          connection,
+          request.user!.id,
+        ),
+      };
+    },
+  );
+
+  app.patch(
+    '/api/v1/notification-preferences',
+    { preHandler: requireAuth },
+    async (request) => {
+      const fields = updatePreferencesSchema.parse(request.body ?? {});
+      return {
+        preferences: await updateNotificationPreferences(
+          connection,
+          request.user!.id,
+          fields,
+        ),
+      };
+    },
+  );
 }
 
 function sessionMeta(request: {

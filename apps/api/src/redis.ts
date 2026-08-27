@@ -1,9 +1,10 @@
-import type { HealthProbe } from '@ikimetr/shared';
+import { type HealthProbe, JOB_QUEUE_KEY } from '@ikimetr/shared';
 import { createClient } from 'redis';
 
 export interface RedisHealthConnection extends HealthProbe {
   connect(): Promise<void>;
   close(): Promise<void>;
+  enqueue(jobId: string): Promise<void>;
 }
 
 export function createRedisHealthConnection(
@@ -31,6 +32,12 @@ export function createRedisHealthConnection(
       }
 
       await client.ping();
+    },
+    async enqueue(jobId: string) {
+      if (!client.isReady) {
+        throw new Error('Redis is unavailable');
+      }
+      await client.lPush(JOB_QUEUE_KEY, jobId);
     },
     async close() {
       if (client.isOpen) {
