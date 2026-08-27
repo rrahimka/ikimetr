@@ -3,15 +3,9 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { Pool } from 'pg';
 import { runner } from 'node-pg-migrate';
+import { createClient, type RedisClientType } from 'redis';
 
-import {
-  createDatabaseConnection,
-  type DatabaseConnection,
-} from '@ikimetr/database';
-import type { HealthProbe } from '@ikimetr/shared';
-
-import { buildApp } from '../src/app.js';
-import type { AppDependencies } from '../src/app.js';
+import { type DatabaseConnection } from '@ikimetr/database';
 
 const repositoryRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const migrationsDir = resolve(repositoryRoot, 'packages/database/migrations');
@@ -20,7 +14,7 @@ const disposablePattern = /^ikimetr_test_[a-f0-9]{24}$/u;
 function readDatabaseUrl(): URL {
   const value = process.env['DATABASE_URL'];
   if (!value) {
-    throw new Error('DATABASE_URL is required for integration tests');
+    throw new Error('DATABASE_URL is required for worker integration tests');
   }
   const url = new URL(value);
   if (url.protocol !== 'postgresql:' && url.protocol !== 'postgres:') {
@@ -85,66 +79,25 @@ export async function migrateDatabase(databaseUrl: string): Promise<void> {
   });
 }
 
-export async function truncateDatabase(
+export function createTestRedis(): RedisClientType {
+  const url = process.env['REDIS_URL'] ?? 'redis://127.0.0.1:6379';
+  const client = createClient({ url });
+  client.on('error', () => undefined);
+  return client;
+}
+
+export async function insertUser(
   connection: DatabaseConnection,
-): Promise<void> {
-  await connection.transaction((tx) =>
-    tx.query(
-      `TRUNCATE app.users, app.auth_identities, app.sessions, app.profiles,
-        app.realtor_profiles, app.agencies, app.agency_memberships,
-        app.properties, app.property_status_history, app.property_images,
-        app.request_matches, app.external_listings, app.listings,
-        app.client_requests
-        RESTART IDENTITY CASCADE`,
+): Promise<string> {
+  const result = await connection.transaction((tx) =>
+    tx.query<{ id: string }>(
+      `INSERT INTO app.users (id) VALUES (gen_random_uuid()) RETURNING id`,
+      [],
     ),
   );
-}
-
-export interface TestContext {
-  app: ReturnType<typeof buildApp>;
-  connection: DatabaseConnection;
-  database: TestDatabase;
-  redisHealth: HealthProbe;
-}
-
-export async function setupTestContext(): Promise<TestContext> {
-  const database = await createTestDatabase();
-  await migrateDatabase(database.databaseUrl);
-  const connection = createDatabaseConnection(database.databaseUrl);
-  const redisHealth: HealthProbe = { check: async () => undefined };
-  const dependencies: AppDependencies = {
-    database: connection,
-    redis: redisHealth,
-    connection,
-  };
-  const app = buildApp(dependencies);
-  await app.ready();
-  return { app, connection, database, redisHealth };
-}
-
-export async function teardownTestContext(ctx: TestContext): Promise<void> {
-  await ctx.app.close();
-  await ctx.connection.close();
-  await dropTestDatabase(ctx.database);
-}
-
-export async function registerUser(
-  app: TestContext['app'],
-  email: string,
-  password: string,
-): Promise<{ token: string; userId: string; email: string }> {
-  const response = await app.inject({
-    method: 'POST',
-    url: '/api/v1/auth/register',
-    payload: { email, password },
-  });
-  if (response.statusCode !== 201) {
-    throw new Error(`register failed: ${response.statusCode} ${response.body}`);
+  const row = result.rows[0];
+  if (!row) {
+    throw new Error('user insert failed');
   }
-  const body = response.json() as { token: string; user: { id: string } };
-  return { token: body.token, userId: body.user.id, email };
-}
-
-export function authHeader(token: string): Record<string, string> {
-  return { authorization: `Bearer ${token}` };
+  return row.id;
 }

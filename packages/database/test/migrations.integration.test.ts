@@ -118,6 +118,9 @@ describe('database foundation migrations', () => {
           '1786492940000_client_requests',
           '1786492950000_listings_title',
           '1786492960000_phone_hash_width',
+          '1786494100000_messaging',
+          '1786494200000_notifications',
+          '1786494300000_jobs',
         ]);
         expect(secondRun).toEqual([]);
 
@@ -176,7 +179,7 @@ describe('database foundation migrations', () => {
           GROUP BY role.rolname
         `);
         expect(history.rows).toEqual([
-          { migration_count: '8', owner: 'ikimetr_migrator' },
+          { migration_count: '11', owner: 'ikimetr_migrator' },
         ]);
 
         const roles = await pool.query<{
@@ -222,7 +225,7 @@ describe('database foundation migrations', () => {
           FROM information_schema.tables
           WHERE table_schema IN ('app', 'audit', 'ingestion')
         `);
-        expect(projectTableCount.rows).toEqual([{ count: '14' }]);
+        expect(projectTableCount.rows).toEqual([{ count: '20' }]);
 
         const coreTables = await pool.query<{ name: string }>(`
           SELECT table_name AS name
@@ -235,8 +238,14 @@ describe('database foundation migrations', () => {
           'agency_memberships',
           'auth_identities',
           'client_requests',
+          'conversation_participants',
+          'conversations',
           'external_listings',
+          'jobs',
           'listings',
+          'messages',
+          'notification_preferences',
+          'notifications',
           'profiles',
           'properties',
           'property_images',
@@ -403,14 +412,14 @@ describe('database foundation migrations', () => {
             ) AS role_count
         `);
         expect(afterDown.rows).toEqual([
-          { history_count: '7', role_count: '3' },
+          { history_count: '10', role_count: '3' },
         ]);
 
         await runTestMigrations(databaseUrl);
         const afterUp = await pool.query<{ count: string }>(`
            SELECT COUNT(*)::text AS count FROM migration.pgmigrations
          `);
-        expect(afterUp.rows).toEqual([{ count: '8' }]);
+        expect(afterUp.rows).toEqual([{ count: '11' }]);
       });
     },
     integrationTimeout,
