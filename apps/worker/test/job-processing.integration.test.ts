@@ -127,7 +127,7 @@ describe('worker job processing', () => {
     expect(await notificationCount(userB)).toBe(0);
   });
 
-  it('prevents duplicate notifications for the same idempotency key', async () => {
+  it('uses durable job keys instead of payload idempotency keys', async () => {
     const userA = await insertUser(connection);
     const processor = buildProcessor();
 
@@ -156,7 +156,7 @@ describe('worker job processing', () => {
     await processor.processOne(first);
     await processor.processOne(second);
 
-    expect(await notificationCount(userA)).toBe(1);
+    expect(await notificationCount(userA)).toBe(2);
   });
 
   it('retries a transient failure a bounded number of times then succeeds', async () => {
@@ -254,5 +254,68 @@ describe('worker job processing', () => {
     await processor.runScheduler();
     const dequeued = await dequeueJob(redis, 1000);
     expect(dequeued).toBe(jobId);
+  });
+
+  it('replays a crashed notification job without creating a duplicate', async () => {
+    const userB = await insertUser(connection);
+    const processor = buildProcessor();
+
+    // Payload shape is byte-identical to what apps/api/src/messaging/service.ts
+    // sendMessage enqueues for a `notification.deliver` job: it intentionally
+    // carries NO idempotencyKey (the durable key lives on app.jobs).
+    const payload = {
+      userId: userB,
+      type: 'new_message',
+      referenceType: 'conversation',
+      referenceId: '11111111-1111-1111-1111-111111111111',
+      title: 'New message',
+      body: 'hello',
+    };
+    const durableKey = `new_message:msg-1:${userB}`;
+    const jobId = await enqueue('notification.deliver', payload, durableKey);
+
+    // Simulate the crash window: the handler side effect commits (notification
+    // row inserted) but the process crashes before the job status is flipped to
+    // 'completed'. We claim the job, run the handler inside its own committed
+    // transaction, then leave the job as 'processing'.
+    const claimed = await connection.transaction((tx) =>
+      tx.query<{ id: string; payload: unknown; idempotency_key: string | null }>(
+        `UPDATE app.jobs
+         SET status = 'processing'
+         WHERE id = $1
+         RETURNING id, payload, idempotency_key`,
+        [jobId],
+      ),
+    );
+    const claimedJob = claimed.rows[0]!;
+    await connection.transaction(async (tx) => {
+      await handleNotificationDeliver(tx, claimedJob.payload, {
+        id: claimedJob.id,
+        idempotencyKey: claimedJob.idempotency_key,
+      });
+    });
+    expect(await notificationCount(userB)).toBe(1);
+
+    // Crash recovery: a stale/processing job is reset to 'queued' (as
+    // recoverStale / requeuePending do) and replayed by the worker.
+    await connection.transaction((tx) =>
+      tx.query(
+        `UPDATE app.jobs SET updated_at = now() - interval '10 minutes' WHERE id = $1`,
+        [jobId],
+      ),
+    );
+    await processor.recoverStale();
+
+    await processor.processOne(jobId);
+
+    expect(await notificationCount(userB)).toBe(1);
+    expect(await jobStatus(jobId)).toBe('completed');
+    const stored = await connection.transaction((tx) =>
+      tx.query<{ idempotency_key: string | null }>(
+        `SELECT idempotency_key FROM app.notifications WHERE user_id = $1`,
+        [userB],
+      ),
+    );
+    expect(stored.rows[0]?.idempotency_key).toBe(durableKey);
   });
 });

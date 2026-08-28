@@ -25,6 +25,7 @@ export interface JobRow {
   payload: unknown;
   attempts: number;
   maxAttempts: number;
+  idempotencyKey: string | null;
 }
 
 export type JobHandler = (
@@ -51,6 +52,7 @@ interface JobDbRow {
   attempts: number;
   max_attempts: number;
   status: string;
+  idempotency_key: string | null;
 }
 
 export interface JobProcessor {
@@ -117,8 +119,8 @@ export function createJobProcessor(options: JobProcessorOptions): JobProcessor {
   async function processOne(jobId: string): Promise<void> {
     const loaded = await db.transaction((tx) =>
       tx.query<JobDbRow>(
-        `SELECT id, type, payload, attempts, max_attempts, status
-         FROM app.jobs WHERE id = $1`,
+        `SELECT id, type, payload, attempts, max_attempts, status, idempotency_key
+          FROM app.jobs WHERE id = $1`,
         [jobId],
       ),
     );
@@ -157,6 +159,7 @@ export function createJobProcessor(options: JobProcessorOptions): JobProcessor {
           payload: job.payload,
           attempts: job.attempts,
           maxAttempts: job.max_attempts,
+          idempotencyKey: job.idempotency_key,
         });
       });
       await db.transaction((tx) =>

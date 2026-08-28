@@ -158,18 +158,26 @@ function computeVisibleAfter(type: string, prefs: Preferences): Date {
 export async function handleNotificationDeliver(
   tx: DatabaseTransaction,
   payload: unknown,
+  job: { id: string; idempotencyKey: string | null },
 ): Promise<void> {
   const data = parsePayload(payload);
   const prefs = await getPreferences(tx, data.userId);
   if (prefs.disabledTypes.includes(data.type)) {
     return;
   }
+  // Exactly-once notification creation must be keyed on the durable job
+  // identity, not on a key the caller chooses to embed in the payload JSON.
+  // Production outbox jobs (messaging/billing) set app.jobs.idempotency_key but
+  // intentionally do NOT include it in the notification payload, so replays of
+  // the same job would otherwise insert duplicate notifications. Fall back to
+  // the stable job id only for legacy rows without a durable key.
+  const notificationKey = job.idempotencyKey ?? `job:${job.id}`;
   const visibleAfter = computeVisibleAfter(data.type, prefs);
   await tx.query(
     `INSERT INTO app.notifications
-       (user_id, type, reference_type, reference_id, title, body, payload, idempotency_key, visible_after)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-     ON CONFLICT (idempotency_key) DO NOTHING`,
+      (user_id, type, reference_type, reference_id, title, body, payload, idempotency_key, visible_after)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    ON CONFLICT (idempotency_key) DO NOTHING`,
     [
       data.userId,
       data.type,
@@ -178,7 +186,7 @@ export async function handleNotificationDeliver(
       data.title,
       data.body,
       JSON.stringify(data),
-      data.idempotencyKey,
+      notificationKey,
       visibleAfter,
     ],
   );
