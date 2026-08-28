@@ -61,18 +61,26 @@ review confirms **genuine** model drift against the constitution / `docs/domain`
 
 ## Net assessment
 
-The "drift" is primarily a **terminology / naming mismatch** between the
-forensic report and the implemented schema, not a wholesale missing domain
-model:
+The "drift" is **genuine and architectural**, not a terminology mismatch. The
+canonical logical model in `docs/database/DATABASE.md` (and the constitution /
+master architecture) explicitly documents these entities — `realtor_properties`,
+`owners`, `owner_contacts`, `clients`, `client_contacts` — and the binding rule
+**"Price lives on Listing, not Property"** (DATABASE.md §Design rules). The
+current implemented schema does **not** conform:
 
-- The domain entities the report cares about (property, listing, realtor,
-  client, owner) are **present**, modeled as: `properties`, `listings`,
-  `external_listings`, `realtor_profiles`, `client_requests`, `users`
-  (clients/owners are users), and `owner_alerts`.
-- Genuinely absent tables (`realtor_properties`, `clients`, `client_contacts`,
-  `owners`, `owner_contacts`) were **never part of the implemented/committed
-  schema**; they appear only in the report's prose. No migration or code
-  references them.
+- Those documented tables are absent from `packages/database/migrations/`; the
+  implementation models a realtor's inventory as `app.properties` owned via
+  `owner_user_id` / `agency_id`, clients as `users` rows + `app.client_requests`,
+  and ownership/contacts as `properties.owner_user_id` + `agency_id` +
+  `app.owner_alerts`.
+- `app.properties` carries listing-like columns (`transaction_type`,
+  `price_amount`, `currency`), directly contradicting "Price lives on Listing,
+  not Property". The `properties` → `listings` derivation is not the documented
+  domain shape.
+
+This requires a separate **ADR** (schema split, ownership model, contact model,
+and moving price from Property to Listing). It is explicitly out of scope for
+Stage 1 / Stage 1B; no schema change was made here.
 
 ## Recommended follow-up (out of scope for Stage 1)
 
