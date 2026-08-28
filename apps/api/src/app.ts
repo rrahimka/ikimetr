@@ -1,4 +1,4 @@
-import type { HealthProbe, HealthResponse } from '@ikimetr/shared';
+import type { HealthProbe } from '@ikimetr/shared';
 import type { DatabaseConnection } from '@ikimetr/database';
 import type { RedisClientType } from 'redis';
 import { z } from '@ikimetr/validation';
@@ -6,6 +6,7 @@ import Fastify from 'fastify';
 
 import { AppError } from './errors.js';
 import type { PaymentProvider } from './billing/provider.js';
+import { registerHealthRoute } from './health.js';
 import { registerRoutes } from './routes.js';
 import { type Outbox, insertJobRow } from './queue/outbox.js';
 
@@ -28,18 +29,6 @@ export interface AppDependencies {
 export interface BuildAppOptions {
   logger?: boolean;
 }
-
-const healthResponseSchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['status'],
-  properties: {
-    status: {
-      type: 'string',
-      enum: ['ok', 'unavailable'],
-    },
-  },
-} as const;
 
 export function buildApp(
   dependencies: AppDependencies,
@@ -112,29 +101,7 @@ export function buildApp(
     });
   });
 
-  app.get<{ Reply: HealthResponse }>(
-    '/health',
-    {
-      schema: {
-        response: {
-          200: healthResponseSchema,
-          503: healthResponseSchema,
-        },
-      },
-    },
-    async (_request, reply) => {
-      try {
-        await Promise.all([
-          dependencies.database.check(),
-          dependencies.redis.check(),
-        ]);
-
-        return { status: 'ok' };
-      } catch {
-        return reply.code(503).send({ status: 'unavailable' });
-      }
-    },
-  );
+  registerHealthRoute(app, dependencies);
 
   const outbox: Outbox =
     dependencies.outbox ??
