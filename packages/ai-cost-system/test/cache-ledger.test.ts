@@ -6,7 +6,10 @@ import { describe, expect, it } from 'vitest';
 
 import { VerifiedCacheRuntime } from '../src/cache-runtime.js';
 import { AccountingLedger } from '../src/ledger.js';
-import { LedgerValidationError, parseLedgerEvent } from '../src/ledger-events.js';
+import {
+  LedgerValidationError,
+  parseLedgerEvent,
+} from '../src/ledger-events.js';
 import {
   makePendingInput,
   makeUnverifiedInput,

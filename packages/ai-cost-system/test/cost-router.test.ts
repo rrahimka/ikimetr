@@ -50,9 +50,9 @@ afterEach(async () => {
   vi.restoreAllMocks();
   await Promise.all(fixtures.splice(0).map((fixture) => fixture.dispose()));
   await Promise.all(
-    temporaryDirectories.splice(0).map((directory) =>
-      rm(directory, { force: true, recursive: true }),
-    ),
+    temporaryDirectories
+      .splice(0)
+      .map((directory) => rm(directory, { force: true, recursive: true })),
   );
 });
 
@@ -335,8 +335,7 @@ async function publishVerified(
   harness: Harness,
   taskRequest: TaskRoutingRequest,
 ): Promise<CacheCompatibilityContext> {
-  const profileHash =
-    harness.snapshot.sourceFileHashes['verification.json'];
+  const profileHash = harness.snapshot.sourceFileHashes['verification.json'];
   const pending = await harness.cache.begin(
     makePendingInput({
       task_id: taskRequest.task_id,
@@ -529,9 +528,9 @@ describe('CostRouter dry-run', () => {
       pricing_status: 'KNOWN',
     });
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(events.some((value) => value.event_type === 'BudgetReservation')).toBe(
-      false,
-    );
+    expect(
+      events.some((value) => value.event_type === 'BudgetReservation'),
+    ).toBe(false);
     expect(events.some((value) => value.event_type === 'AttemptStarted')).toBe(
       false,
     );
@@ -701,7 +700,10 @@ describe('CostRouter dry-run', () => {
         }
         for (const value of snapshots) {
           const snapshot = nestedObject({ value }, 'value');
-          if (snapshot['provider'] === 'deepseek' || snapshot['provider'] === 'qwen') {
+          if (
+            snapshot['provider'] === 'deepseek' ||
+            snapshot['provider'] === 'qwen'
+          ) {
             snapshot['status'] = status;
             if (status === 'unknown') {
               for (const field of [
@@ -738,10 +740,9 @@ describe('CostRouter dry-run', () => {
 
   it('stops on exhausted budget without a reservation write', async () => {
     const harness = await createHarness(({ budgets }) => {
-      nestedObject(
-        nestedObject(budgets, 'limits'),
-        'perTask',
-      )['maxInputTokens'] = 50;
+      nestedObject(nestedObject(budgets, 'limits'), 'perTask')[
+        'maxInputTokens'
+      ] = 50;
     });
     await appendHealth(harness.ledger, 'local-ai', 'healthy');
 
@@ -760,9 +761,9 @@ describe('CostRouter dry-run', () => {
       reason_code: 'BUDGET_DENIED',
       budget_status: 'DENIED',
     });
-    expect(events.some((value) => value.event_type === 'BudgetReservation')).toBe(
-      false,
-    );
+    expect(
+      events.some((value) => value.event_type === 'BudgetReservation'),
+    ).toBe(false);
   });
 
   it('maps an unavailable budget preflight to fail-closed STOP', async () => {

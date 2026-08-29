@@ -29,13 +29,15 @@ export interface DeepSeekAdapterConfig {
 }
 
 const responseSchema = z.object({
-  choices: z.array(
-    z.object({
-      message: z.object({
-        content: z.string(),
+  choices: z
+    .array(
+      z.object({
+        message: z.object({
+          content: z.string(),
+        }),
       }),
-    }),
-  ).nonempty(),
+    )
+    .nonempty(),
   usage: z.object({
     prompt_tokens: z.number().int().nonnegative(),
     completion_tokens: z.number().int().nonnegative(),
@@ -136,7 +138,9 @@ export class DeepSeekAdapter {
     const startIso = this.now().toISOString();
     const estInput = Math.max(1, Math.ceil(params.prompt.length / 4));
     const providerConfig =
-      this.configSnapshot.configuration.providers.providers[this.config.provider];
+      this.configSnapshot.configuration.providers.providers[
+        this.config.provider
+      ];
 
     const reserveReq: BudgetReservationRequest = {
       eventId: `reserve-${randomUUID()}`,
@@ -184,7 +188,9 @@ export class DeepSeekAdapter {
       const bodyStr = canonicalize({
         model: this.config.model,
         messages: [
-          ...(params.system ? [{ role: 'system', content: params.system }] : []),
+          ...(params.system
+            ? [{ role: 'system', content: params.system }]
+            : []),
           { role: 'user', content: params.prompt },
         ],
         stream: false,
@@ -220,9 +226,15 @@ export class DeepSeekAdapter {
         });
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {
-          throw new DeepSeekAdapterError('TIMEOUT', 'DeepSeek invocation timed out');
+          throw new DeepSeekAdapterError(
+            'TIMEOUT',
+            'DeepSeek invocation timed out',
+          );
         }
-        throw new DeepSeekAdapterError('NETWORK_ERROR', 'Network request failed');
+        throw new DeepSeekAdapterError(
+          'NETWORK_ERROR',
+          'Network request failed',
+        );
       } finally {
         clearTimeout(timer);
       }
@@ -246,7 +258,10 @@ export class DeepSeekAdapter {
       }
 
       if (Buffer.byteLength(resText, 'utf8') > MAX_RES_BYTES) {
-        throw new DeepSeekAdapterError('MALFORMED_RESPONSE', 'Response too large');
+        throw new DeepSeekAdapterError(
+          'MALFORMED_RESPONSE',
+          'Response too large',
+        );
       }
 
       let parsedJson: unknown;

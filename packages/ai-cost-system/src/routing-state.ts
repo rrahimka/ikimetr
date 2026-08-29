@@ -3,15 +3,9 @@ import type { ApprovalScope, RoutingRoute } from './routing-contracts.js';
 import type { ProviderId } from './schemas.js';
 
 export type ProviderHealthState =
-  | 'healthy'
-  | 'degraded'
-  | 'unavailable'
-  | 'unknown';
+  'healthy' | 'degraded' | 'unavailable' | 'unknown';
 export type EffectiveApprovalState =
-  | 'approved'
-  | 'denied'
-  | 'revoked'
-  | 'missing';
+  'approved' | 'denied' | 'revoked' | 'missing';
 
 export interface RoutingAttemptEvidence {
   readonly attempt_id: string;
@@ -50,8 +44,9 @@ export function deriveRoutingState(
 
   for (const event of events) {
     if (event.event_type === 'ProviderHealthEvent') {
-      providerHealth[healthKey(event.provider, event.model)] =
-        normalizeHealth(event.status);
+      providerHealth[healthKey(event.provider, event.model)] = normalizeHealth(
+        event.status,
+      );
       continue;
     }
     if (event.event_type === 'ApprovalEvent' && event.task_id === taskId) {
@@ -142,10 +137,7 @@ export function hasRepeatedFailure(
     readonly request_hash?: string;
   },
 ): boolean {
-  if (
-    input.error_fingerprint === null ||
-    input.current_diff_hash === null
-  ) {
+  if (input.error_fingerprint === null || input.current_diff_hash === null) {
     return false;
   }
   const matching = state.attempts.filter(
@@ -164,15 +156,12 @@ export function hasRepeatedFailure(
   return (
     previous.route === latest.route &&
     previous.verification_evidence_hashes.join('|') ===
-    latest.verification_evidence_hashes.join('|')
+      latest.verification_evidence_hashes.join('|')
   );
 }
 
 function normalizeHealth(
-  status: Extract<
-    LedgerEvent,
-    { event_type: 'ProviderHealthEvent' }
-  >['status'],
+  status: Extract<LedgerEvent, { event_type: 'ProviderHealthEvent' }>['status'],
 ): ProviderHealthState {
   if (status === 'healthy') {
     return 'healthy';

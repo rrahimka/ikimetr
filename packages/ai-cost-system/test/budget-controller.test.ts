@@ -27,9 +27,9 @@ const now = () => new Date('2026-08-09T12:00:00.000Z');
 afterEach(async () => {
   await Promise.all(fixtures.splice(0).map((fixture) => fixture.dispose()));
   await Promise.all(
-    temporaryDirectories.splice(0).map((directory) =>
-      rm(directory, { force: true, recursive: true }),
-    ),
+    temporaryDirectories
+      .splice(0)
+      .map((directory) => rm(directory, { force: true, recursive: true })),
   );
 });
 
@@ -261,17 +261,20 @@ describe('BudgetController reservations', () => {
     const nullBudget = await createHarness(({ budgets }) => {
       setScopedLimit(budgets, 'perTask', 'maxInputTokens', null);
     });
-    await expect(nullBudget.controller.reserve(request('null'))).rejects.toMatchObject({
+    await expect(
+      nullBudget.controller.reserve(request('null')),
+    ).rejects.toMatchObject({
       code: 'NOT_CONFIGURED',
     });
 
     const disabled = await createHarness(({ providers }) => {
-      nestedObject(
-        nestedObject(providers, 'providers'),
-        'deepseek',
-      )['enabled'] = false;
+      nestedObject(nestedObject(providers, 'providers'), 'deepseek')[
+        'enabled'
+      ] = false;
     });
-    await expect(disabled.controller.reserve(request('disabled'))).rejects.toMatchObject({
+    await expect(
+      disabled.controller.reserve(request('disabled')),
+    ).rejects.toMatchObject({
       code: 'PROVIDER_DISABLED',
     });
   });
@@ -300,12 +303,17 @@ describe('BudgetController reservations', () => {
     const { controller } = await createHarness(({ budgets }) => {
       setScopedLimit(budgets, scope, 'maxInputTokens', 150);
     });
-    await controller.reserve(request(`${scope}-1`, { estimatedInputTokens: 100 }));
+    await controller.reserve(
+      request(`${scope}-1`, { estimatedInputTokens: 100 }),
+    );
 
     await expect(
       controller.reserve(
         request(`${scope}-2`, {
-          taskId: scope.includes('Day') || scope.includes('Month') ? 'task-2' : 'task-1',
+          taskId:
+            scope.includes('Day') || scope.includes('Month')
+              ? 'task-2'
+              : 'task-1',
           estimatedInputTokens: 100,
         }),
       ),
@@ -314,10 +322,9 @@ describe('BudgetController reservations', () => {
 
   it('enforces provider/task minimum, cloud calls, and retry ceilings', async () => {
     const minimum = await createHarness(({ providers, budgets }) => {
-      nestedObject(
-        nestedObject(providers, 'providers'),
-        'deepseek',
-      )['maxCallsPerTask'] = 1;
+      nestedObject(nestedObject(providers, 'providers'), 'deepseek')[
+        'maxCallsPerTask'
+      ] = 1;
       setScopedLimit(budgets, 'providerTask', 'maxCalls', 5);
     });
     await minimum.controller.reserve(request('minimum-1'));
@@ -349,10 +356,9 @@ describe('BudgetController reservations', () => {
 
   it('enforces local wall-time and budget currency', async () => {
     const local = await createHarness(({ budgets }) => {
-      nestedObject(
-        nestedObject(budgets, 'limits'),
-        'localWallTime',
-      )['maxMillisecondsPerTask'] = 1_500;
+      nestedObject(nestedObject(budgets, 'limits'), 'localWallTime')[
+        'maxMillisecondsPerTask'
+      ] = 1_500;
     });
     await local.controller.reserve(
       request('local-1', {
@@ -377,7 +383,9 @@ describe('BudgetController reservations', () => {
         amountMicros: 100_000,
       });
     });
-    await expect(currency.controller.reserve(request('currency'))).rejects.toMatchObject({
+    await expect(
+      currency.controller.reserve(request('currency')),
+    ).rejects.toMatchObject({
       code: 'INVALID_REQUEST',
     });
   });
@@ -392,8 +400,12 @@ describe('BudgetController reservations', () => {
       controller.reserve(request('concurrent-2', { taskId: 'task-b' })),
     ]);
 
-    expect(outcomes.filter(({ status }) => status === 'fulfilled')).toHaveLength(1);
-    expect(outcomes.filter(({ status }) => status === 'rejected')).toHaveLength(1);
+    expect(
+      outcomes.filter(({ status }) => status === 'fulfilled'),
+    ).toHaveLength(1);
+    expect(outcomes.filter(({ status }) => status === 'rejected')).toHaveLength(
+      1,
+    );
   });
 });
 
@@ -412,7 +424,9 @@ describe('BudgetController lifecycle and restart recovery', () => {
       actualLocalWallTimeMs: 0,
       reasonCode: 'completed',
     });
-    expect(controller.getState().totals.perTask.get('task-1')?.cost.amountMicros).toBe(30);
+    expect(
+      controller.getState().totals.perTask.get('task-1')?.cost.amountMicros,
+    ).toBe(30);
 
     await controller.reserve(request('release', { taskId: 'task-2' }));
     await controller.release({
@@ -435,7 +449,11 @@ describe('BudgetController lifecycle and restart recovery', () => {
       now,
     });
 
-    expect(restarted.getState().recoveryBlockingReservationIds.has('reservation-crash')).toBe(true);
+    expect(
+      restarted
+        .getState()
+        .recoveryBlockingReservationIds.has('reservation-crash'),
+    ).toBe(true);
     (
       restarted.getState().recoveryBlockingReservationIds as Set<string>
     ).clear();
@@ -448,7 +466,9 @@ describe('BudgetController lifecycle and restart recovery', () => {
       reservationId: 'reservation-crash',
       reasonCode: 'safe-recovery',
     });
-    await expect(restarted.reserve(request('after-recovery'))).resolves.toBeDefined();
+    await expect(
+      restarted.reserve(request('after-recovery')),
+    ).resolves.toBeDefined();
   });
 
   it('rejects a pricing resolver from a different config snapshot', async () => {
@@ -490,7 +510,9 @@ describe('BudgetController lifecycle and restart recovery', () => {
       pricingResolver,
       now,
     });
-    await expect(restarted.reserve(request('after-overrun'))).rejects.toMatchObject({
+    await expect(
+      restarted.reserve(request('after-overrun')),
+    ).rejects.toMatchObject({
       code: 'DISCREPANCY_BLOCK',
     });
   });
@@ -498,9 +520,9 @@ describe('BudgetController lifecycle and restart recovery', () => {
   it('rejects replay, double settlement, and unknown reservation transitions', async () => {
     const { controller } = await createHarness();
     await controller.reserve(request('duplicate'));
-    await expect(controller.reserve(request('duplicate'))).rejects.toBeInstanceOf(
-      BudgetControllerError,
-    );
+    await expect(
+      controller.reserve(request('duplicate')),
+    ).rejects.toBeInstanceOf(BudgetControllerError);
     await controller.release({
       eventId: 'event-release-duplicate',
       settlementId: 'settlement-duplicate',
@@ -532,11 +554,15 @@ describe('BudgetController lifecycle and restart recovery', () => {
     await writeFile(external, '', 'utf8');
     await symlink(external, ledgerPath, 'file');
 
-    await expect(controller.reserve(request('storage-failure'))).rejects.toMatchObject({
+    await expect(
+      controller.reserve(request('storage-failure')),
+    ).rejects.toMatchObject({
       code: 'STORAGE_FAILURE',
     });
     expect(controller.getState().activeReservations.size).toBe(0);
-    await expect(controller.reserve(request('blocked-after-failure'))).rejects.toMatchObject({
+    await expect(
+      controller.reserve(request('blocked-after-failure')),
+    ).rejects.toMatchObject({
       code: 'STORAGE_FAILURE',
     });
   });

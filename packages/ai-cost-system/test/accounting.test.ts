@@ -26,9 +26,9 @@ const timestamp = '2026-08-09T08:30:00.000Z';
 
 afterEach(async () => {
   await Promise.all(
-    temporaryDirectories.splice(0).map((directory) =>
-      rm(directory, { force: true, recursive: true }),
-    ),
+    temporaryDirectories
+      .splice(0)
+      .map((directory) => rm(directory, { force: true, recursive: true })),
   );
 });
 
@@ -206,7 +206,9 @@ describe('AccountingLedger', () => {
       join(repository, '.ai-cost', 'ledger.jsonl'),
       'utf8',
     );
-    expect(source).toBe(`${canonicalize(events[0])}\n${canonicalize(events[1])}\n`);
+    expect(source).toBe(
+      `${canonicalize(events[0])}\n${canonicalize(events[1])}\n`,
+    );
     expect(await ledger.replay()).toEqual(events);
   });
 
@@ -288,9 +290,7 @@ describe('AccountingLedger', () => {
       raw_log: 'must not persist',
     } as unknown as LedgerEvent;
 
-    await expect(ledger.append(invalid)).rejects.toThrow(
-      LedgerValidationError,
-    );
+    await expect(ledger.append(invalid)).rejects.toThrow(LedgerValidationError);
     expect(await ledger.replay()).toEqual([]);
   });
 });

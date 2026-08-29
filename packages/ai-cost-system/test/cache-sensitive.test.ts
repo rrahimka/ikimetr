@@ -163,9 +163,9 @@ describe('ledger-scoped Sensitive approval', () => {
       sensitiveCodec: codec,
       hmac,
     });
-    await expect(noCeilingRuntime.begin(sensitivePending)).rejects.toBeInstanceOf(
-      CacheRuntimeError,
-    );
+    await expect(
+      noCeilingRuntime.begin(sensitivePending),
+    ).rejects.toBeInstanceOf(CacheRuntimeError);
 
     const runtime = await VerifiedCacheRuntime.open({
       repositoryRoot,

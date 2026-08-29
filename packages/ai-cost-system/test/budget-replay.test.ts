@@ -163,23 +163,19 @@ describe('deterministic budget replay', () => {
     ]);
 
     expect(
-      state.totals.providerDay.get(
-        budgetScopeKey('deepseek', '2026-08-31'),
-      )?.calls,
+      state.totals.providerDay.get(budgetScopeKey('deepseek', '2026-08-31'))
+        ?.calls,
     ).toBe(1);
     expect(
-      state.totals.providerDay.get(
-        budgetScopeKey('deepseek', '2026-09-01'),
-      )?.calls,
+      state.totals.providerDay.get(budgetScopeKey('deepseek', '2026-09-01'))
+        ?.calls,
     ).toBe(1);
     expect(state.totals.cloudMonth.get('2026-08')?.calls).toBe(1);
     expect(state.totals.cloudMonth.get('2026-09')?.calls).toBe(1);
     expect(state.totals.cloudCallsTask.get('task-1')).toBe(2);
     expect(state.totals.retryTask.get('task-1')).toBe(1);
     expect(
-      state.totals.retryProviderTask.get(
-        budgetScopeKey('task-1', 'deepseek'),
-      ),
+      state.totals.retryProviderTask.get(budgetScopeKey('task-1', 'deepseek')),
     ).toBe(1);
   });
 
@@ -196,10 +192,7 @@ describe('deterministic budget replay', () => {
   it.each([
     {
       label: 'duplicate reservation',
-      events: [
-        reservation(),
-        reservation({ event_id: 'event-reservation-2' }),
-      ],
+      events: [reservation(), reservation({ event_id: 'event-reservation-2' })],
     },
     { label: 'settlement before reserve', events: [settlement()] },
     {

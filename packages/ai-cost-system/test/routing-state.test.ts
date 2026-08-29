@@ -14,9 +14,7 @@ import {
 const hash = (character: string): string => character.repeat(64);
 const occurredAt = '2026-08-09T12:00:00.000Z';
 
-function event(
-  value: Record<string, unknown>,
-): LedgerEvent {
+function event(value: Record<string, unknown>): LedgerEvent {
   return parseLedgerEvent({
     event_version: 1,
     occurred_at: occurredAt,

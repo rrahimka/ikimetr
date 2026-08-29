@@ -39,9 +39,9 @@ afterEach(async () => {
   process.env = { ...originalEnv };
   await Promise.all(fixtures.splice(0).map((f) => f.dispose()));
   await Promise.all(
-    temporaryDirectories.splice(0).map((d) =>
-      rm(d, { force: true, recursive: true }),
-    ),
+    temporaryDirectories
+      .splice(0)
+      .map((d) => rm(d, { force: true, recursive: true })),
   );
 });
 
@@ -190,8 +190,16 @@ function mockFetch(
   ) => Response | Promise<Response>,
 ): void {
   vi.spyOn(globalThis, 'fetch').mockImplementation(
-    (input: Parameters<typeof globalThis.fetch>[0], init?: Parameters<typeof globalThis.fetch>[1]) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    (
+      input: Parameters<typeof globalThis.fetch>[0],
+      init?: Parameters<typeof globalThis.fetch>[1],
+    ) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
       const result = responseFactory(url, init);
       return Promise.resolve(result) as ReturnType<typeof fetch>;
     },
@@ -356,14 +364,13 @@ describe('OllamaAdapter model pinning', () => {
       OllamaAdapterError,
     );
     await expect(adapter.invoke({ prompt: 'test' })).rejects.toSatisfy(
-      (e: unknown) => e instanceof OllamaAdapterError && e.code === 'MODEL_MISMATCH',
+      (e: unknown) =>
+        e instanceof OllamaAdapterError && e.code === 'MODEL_MISMATCH',
     );
   });
 
   it('rejects digest mismatch in health', async () => {
-    mockFetch(() =>
-      tagsResponse([{ name: MODEL, digest: 'wrong-digest' }]),
-    );
+    mockFetch(() => tagsResponse([{ name: MODEL, digest: 'wrong-digest' }]));
     const { adapter } = await createHarness();
     const result = await adapter.health();
     expect(result.status).toBe('unavailable');
@@ -419,7 +426,8 @@ describe('OllamaAdapter invocation', () => {
     mockFetch(() => new Response('redirected', { status: 301 }));
     const { adapter } = await createHarness();
     await expect(adapter.invoke({ prompt: 'test' })).rejects.toSatisfy(
-      (e: unknown) => e instanceof OllamaAdapterError && e.code === 'REDIRECT_REJECTED',
+      (e: unknown) =>
+        e instanceof OllamaAdapterError && e.code === 'REDIRECT_REJECTED',
     );
   });
 
@@ -432,7 +440,9 @@ describe('OllamaAdapter invocation', () => {
   });
 
   it('rejects when response missing required fields', async () => {
-    mockFetch(() => jsonResponse({ model: MODEL, created_at: 'x', done: true }));
+    mockFetch(() =>
+      jsonResponse({ model: MODEL, created_at: 'x', done: true }),
+    );
     const { adapter } = await createHarness();
     await expect(adapter.invoke({ prompt: 'test' })).rejects.toThrow(
       OllamaAdapterError,
@@ -457,9 +467,7 @@ describe('OllamaAdapter structured output', () => {
   });
 
   it('rejects malformed JSON in structured output', async () => {
-    mockFetch(() =>
-      generateResponse({ response: 'not valid json at all' }),
-    );
+    mockFetch(() => generateResponse({ response: 'not valid json at all' }));
     const { adapter } = await createHarness();
     const schema = z.object({}).passthrough();
     await expect(
@@ -478,20 +486,20 @@ describe('OllamaAdapter structured output', () => {
     await expect(
       adapter.invokeStructured({ prompt: 'test', schema }),
     ).rejects.toSatisfy(
-      (e: unknown) => e instanceof OllamaAdapterError && e.code === 'TOOL_CALL_DETECTED',
+      (e: unknown) =>
+        e instanceof OllamaAdapterError && e.code === 'TOOL_CALL_DETECTED',
     );
   });
 
   it('rejects spawn-like output', async () => {
-    mockFetch(() =>
-      generateResponse({ response: 'spawn("cmd.exe")' }),
-    );
+    mockFetch(() => generateResponse({ response: 'spawn("cmd.exe")' }));
     const { adapter } = await createHarness();
     const schema = z.object({}).passthrough();
     await expect(
       adapter.invokeStructured({ prompt: 'test', schema }),
     ).rejects.toSatisfy(
-      (e: unknown) => e instanceof OllamaAdapterError && e.code === 'TOOL_CALL_DETECTED',
+      (e: unknown) =>
+        e instanceof OllamaAdapterError && e.code === 'TOOL_CALL_DETECTED',
     );
   });
   it('sends format json for structured invoke', async () => {
@@ -559,9 +567,7 @@ describe('OllamaAdapter budget and accounting', () => {
 
     const events = await ledger.replay();
     const settlements = events.filter(
-      (e) =>
-        e.event_type === 'BudgetSettlement' &&
-        e.disposition === 'settled',
+      (e) => e.event_type === 'BudgetSettlement' && e.disposition === 'settled',
     );
     expect(settlements.length).toBeGreaterThanOrEqual(1);
   });
@@ -577,15 +583,12 @@ describe('OllamaAdapter budget and accounting', () => {
     const events = await ledger.replay();
     const releases = events.filter(
       (e) =>
-        e.event_type === 'BudgetSettlement' &&
-        e.disposition === 'released',
+        e.event_type === 'BudgetSettlement' && e.disposition === 'released',
     );
     expect(releases.length).toBeGreaterThanOrEqual(1);
 
     const settled = events.filter(
-      (e) =>
-        e.event_type === 'BudgetSettlement' &&
-        e.disposition === 'settled',
+      (e) => e.event_type === 'BudgetSettlement' && e.disposition === 'settled',
     );
     expect(settled.length).toBe(0);
   });
@@ -630,8 +633,7 @@ describe('OllamaAdapter budget and accounting', () => {
 
     const events = await ledger.replay();
     const completed = events.filter(
-      (e) =>
-        e.event_type === 'AttemptCompleted' && e.status === 'completed',
+      (e) => e.event_type === 'AttemptCompleted' && e.status === 'completed',
     );
     expect(completed.length).toBeGreaterThanOrEqual(1);
   });
@@ -646,8 +648,7 @@ describe('OllamaAdapter budget and accounting', () => {
 
     const events = await ledger.replay();
     const failed = events.filter(
-      (e) =>
-        e.event_type === 'AttemptCompleted' && e.status === 'failed',
+      (e) => e.event_type === 'AttemptCompleted' && e.status === 'failed',
     );
     expect(failed.length).toBeGreaterThanOrEqual(1);
   });
@@ -661,7 +662,8 @@ describe('OllamaAdapter response size limits', () => {
     mockFetch(() => jsonResponse({ huge: hugeString }));
     const { adapter } = await createHarness();
     await expect(adapter.invoke({ prompt: 'test' })).rejects.toSatisfy(
-      (e: unknown) => e instanceof OllamaAdapterError && e.code === 'RESPONSE_TOO_LARGE',
+      (e: unknown) =>
+        e instanceof OllamaAdapterError && e.code === 'RESPONSE_TOO_LARGE',
     );
   });
 });

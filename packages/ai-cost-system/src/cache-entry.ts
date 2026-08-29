@@ -48,7 +48,9 @@ const sealedPayloadSchema = z
       .string()
       .min(1)
       .max(16_777_216)
-      .regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u),
+      .regex(
+        /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u,
+      ),
     result_hash: sha256Hex,
   })
   .strict();
@@ -83,21 +85,11 @@ const cacheEntryInputSchema = z
     task_id: identifier,
     parent_entry_hash: sha256Hex.nullable(),
     cache_key: sha256Hex,
-    namespace: z.enum([
-      'provider-request',
-      'verified-artifact',
-      'negative',
-    ]),
+    namespace: z.enum(['provider-request', 'verified-artifact', 'negative']),
     state: cacheStateSchema,
     task_type: identifier,
     route: z.enum(['deterministic', 'local', 'cheap-cloud', 'strong']),
-    provider: z.enum([
-      'local-ai',
-      'deepseek',
-      'qwen',
-      'codex',
-      'claude',
-    ]),
+    provider: z.enum(['local-ai', 'deepseek', 'qwen', 'codex', 'claude']),
     model_revision: boundedText,
     prompt_version: boundedText,
     policy_version: boundedText,
@@ -229,7 +221,9 @@ export function buildClearCachePayload(options: {
   assertSafePayloadValue(options.value);
   const canonicalValue = canonicalize(options.value);
   if (Buffer.byteLength(canonicalValue, 'utf8') > options.maxBytes) {
-    throw new CacheEntryValidationError('Cache payload exceeds its byte ceiling');
+    throw new CacheEntryValidationError(
+      'Cache payload exceeds its byte ceiling',
+    );
   }
   const value = JSON.parse(canonicalValue) as unknown;
   return deepFreeze({
@@ -266,7 +260,9 @@ export async function buildSealedCachePayload(options: {
   const canonicalValue = canonicalize(options.value);
   const clearBytes = Buffer.from(canonicalValue, 'utf8');
   if (clearBytes.byteLength > options.maxBytes) {
-    throw new CacheEntryValidationError('Cache payload exceeds its byte ceiling');
+    throw new CacheEntryValidationError(
+      'Cache payload exceeds its byte ceiling',
+    );
   }
   const resultHash = digestHmac(options.hmac, clearBytes);
   let sealed: Uint8Array;
@@ -445,7 +441,9 @@ export function assertAllowedCacheTransition(
     (from === 'verified' && to === 'quarantined') ||
     (from === 'negative' && to === 'quarantined');
   if (!allowed) {
-    throw new CacheEntryValidationError('Cache state transition is not allowed');
+    throw new CacheEntryValidationError(
+      'Cache state transition is not allowed',
+    );
   }
 }
 
@@ -497,7 +495,9 @@ function validateEntrySemantics(
       entry.verification_evidence !== null ||
       entry.outcome_reason !== null
     ) {
-      throw new CacheEntryValidationError('Pending cache entry is inconsistent');
+      throw new CacheEntryValidationError(
+        'Pending cache entry is inconsistent',
+      );
     }
     return;
   }
@@ -550,9 +550,12 @@ function assertSafeEntryValue(value: unknown): void {
     assertNoSecretLikeValues(value, 'cache entry');
   } catch (error) {
     if (error instanceof ConfigValidationError) {
-      throw new CacheEntrySecurityError('Cache entry contains prohibited data', {
-        cause: error,
-      });
+      throw new CacheEntrySecurityError(
+        'Cache entry contains prohibited data',
+        {
+          cause: error,
+        },
+      );
     }
     throw error;
   }
@@ -628,10 +631,7 @@ function assertPayloadCeiling(maxBytes: number): void {
   }
 }
 
-function digestHmac(
-  hmac: HmacSha256Provider,
-  value: Uint8Array,
-): string {
+function digestHmac(hmac: HmacSha256Provider, value: Uint8Array): string {
   let digest: string;
   try {
     digest = hmac.digest(value);

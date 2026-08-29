@@ -60,7 +60,9 @@ export async function loadConfigSnapshot(
   return deepFreeze(snapshot);
 }
 
-async function resolveConfigDirectory(configDirectory: string): Promise<string> {
+async function resolveConfigDirectory(
+  configDirectory: string,
+): Promise<string> {
   try {
     const resolved = await realpath(configDirectory);
     const metadata = await stat(resolved);
@@ -88,7 +90,9 @@ async function resolveConfigFile(
     if (
       pathFromDirectory === '' ||
       pathFromDirectory === '..' ||
-      pathFromDirectory.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`) ||
+      pathFromDirectory.startsWith(
+        `..${process.platform === 'win32' ? '\\' : '/'}`,
+      ) ||
       isAbsolute(pathFromDirectory)
     ) {
       throw new ConfigValidationError(

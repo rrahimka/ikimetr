@@ -1,12 +1,5 @@
 import { constants } from 'node:fs';
-import {
-  lstat,
-  mkdir,
-  open,
-  readFile,
-  realpath,
-  stat,
-} from 'node:fs/promises';
+import { lstat, mkdir, open, readFile, realpath, stat } from 'node:fs/promises';
 import { isAbsolute, join, relative } from 'node:path';
 
 import { canonicalize } from './canonical.js';
@@ -180,7 +173,9 @@ async function ensureStateDirectory(
   const resolvedState = await realpath(stateDirectory);
   assertContained(repositoryRoot, resolvedState, stateDirectoryName);
   if (relative(repositoryRoot, resolvedState) !== stateDirectoryName) {
-    throw new LedgerStorageError('AI cost state path is not the fixed directory');
+    throw new LedgerStorageError(
+      'AI cost state path is not the fixed directory',
+    );
   }
 }
 
@@ -212,7 +207,9 @@ function assertContained(parent: string, child: string, label: string): void {
   if (
     pathFromParent === '' ||
     pathFromParent === '..' ||
-    pathFromParent.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`) ||
+    pathFromParent.startsWith(
+      `..${process.platform === 'win32' ? '\\' : '/'}`,
+    ) ||
     isAbsolute(pathFromParent)
   ) {
     throw new LedgerStorageError(`${label} escapes its storage boundary`);

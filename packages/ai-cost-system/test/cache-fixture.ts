@@ -84,8 +84,7 @@ export function makeUnverifiedInput(
     patch_hash: parent.patch_hash,
     data_class: parent.data_class,
     input_protection: parent.input_protection,
-    sensitive_persistence_approved:
-      parent.sensitive_persistence_approved,
+    sensitive_persistence_approved: parent.sensitive_persistence_approved,
     data_policy_hash: parent.data_policy_hash,
     tool_versions: parent.tool_versions,
     dependency_versions: parent.dependency_versions,

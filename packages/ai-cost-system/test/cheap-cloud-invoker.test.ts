@@ -9,9 +9,7 @@ import {
 
 type DeepSeekInvoker = Pick<DeepSeekAdapter, 'invoke'>;
 
-function decision(
-  overrides: Partial<RoutingDecision> = {},
-): RoutingDecision {
+function decision(overrides: Partial<RoutingDecision> = {}): RoutingDecision {
   return {
     decision: 'CHEAP_CLOUD',
     route: 'cheap-cloud',
@@ -25,9 +23,17 @@ function decision(
     escalation_allowed: false,
     transition_trace: [
       { stage: 'CACHE', outcome: 'CONTINUE', reason_code: 'CACHE_MISS' },
-      { stage: 'DETERMINISTIC', outcome: 'CONTINUE', reason_code: 'DETERMINISTIC_UNRESOLVED' },
+      {
+        stage: 'DETERMINISTIC',
+        outcome: 'CONTINUE',
+        reason_code: 'DETERMINISTIC_UNRESOLVED',
+      },
       { stage: 'LOCAL', outcome: 'SKIPPED', reason_code: 'LOCAL_UNAVAILABLE' },
-      { stage: 'CHEAP_CLOUD', outcome: 'SELECTED', reason_code: 'ROUTE_SELECTED' },
+      {
+        stage: 'CHEAP_CLOUD',
+        outcome: 'SELECTED',
+        reason_code: 'ROUTE_SELECTED',
+      },
       { stage: 'FINAL', outcome: 'SELECTED', reason_code: 'ROUTE_SELECTED' },
     ],
     reason_summary: 'The first eligible route and provider were selected.',
@@ -43,7 +49,9 @@ type AdapterResult = Awaited<ReturnType<DeepSeekAdapter['invoke']>>;
 function createAdapter(invokeResult?: AdapterResult | Error) {
   return {
     invoke: vi
-      .fn<(_: Parameters<DeepSeekAdapter['invoke']>[0]) => Promise<AdapterResult>>()
+      .fn<
+        (_: Parameters<DeepSeekAdapter['invoke']>[0]) => Promise<AdapterResult>
+      >()
       .mockImplementation(() =>
         invokeResult instanceof Error
           ? Promise.reject(invokeResult)
@@ -64,21 +72,15 @@ describe('CheapCloudInvoker', () => {
 
   it('1. CHEAP_CLOUD + deepseek is accepted', async () => {
     const adapter = createAdapter();
-    const result = await invoker.invoke(
-      decision(),
-      adapter,
-      { prompt: 'test' },
-    );
+    const result = await invoker.invoke(decision(), adapter, {
+      prompt: 'test',
+    });
     expect(result.status).toBe('success');
   });
 
   it('2. allowed invocation calls adapter exactly once', async () => {
     const adapter = createAdapter();
-    await invoker.invoke(
-      decision(),
-      adapter,
-      { prompt: 'test' },
-    );
+    await invoker.invoke(decision(), adapter, { prompt: 'test' });
     expect(adapter.invoke).toHaveBeenCalledOnce();
   });
 
@@ -90,11 +92,9 @@ describe('CheapCloudInvoker', () => {
       latencyMs: 99,
     };
     const adapter = createAdapter(invokeResult);
-    const result = await invoker.invoke(
-      decision(),
-      adapter,
-      { prompt: 'test' },
-    );
+    const result = await invoker.invoke(decision(), adapter, {
+      prompt: 'test',
+    });
     expect(result.status).toBe('success');
     if (result.status === 'success') {
       expect(result.result).toEqual(invokeResult);
@@ -136,21 +136,17 @@ describe('CheapCloudInvoker', () => {
 
   it('7. rejected decision invokes adapter zero times', async () => {
     const adapter = createAdapter();
-    await invoker.invoke(
-      decision({ decision: 'LOCAL' }),
-      adapter,
-      { prompt: 'test' },
-    );
+    await invoker.invoke(decision({ decision: 'LOCAL' }), adapter, {
+      prompt: 'test',
+    });
     expect(adapter.invoke).not.toHaveBeenCalled();
   });
 
   it('8. adapter error is propagated to the caller', async () => {
     const adapter = createAdapter(new Error('adapter explosion'));
-    const result = await invoker.invoke(
-      decision(),
-      adapter,
-      { prompt: 'test' },
-    );
+    const result = await invoker.invoke(decision(), adapter, {
+      prompt: 'test',
+    });
     expect(result.status).toBe('failed');
     if (result.status === 'failed') {
       expect(result.reason).toBe('adapter explosion');
@@ -159,21 +155,15 @@ describe('CheapCloudInvoker', () => {
 
   it('9. adapter failure causes NO retry — adapter invoked exactly once', async () => {
     const adapter = createAdapter(new Error('adapter explosion'));
-    await invoker.invoke(
-      decision(),
-      adapter,
-      { prompt: 'test' },
-    );
+    await invoker.invoke(decision(), adapter, { prompt: 'test' });
     expect(adapter.invoke).toHaveBeenCalledOnce();
   });
 
   it('10. adapter failure does NOT fallback to another provider', async () => {
     const adapter = createAdapter(new Error('adapter explosion'));
-    const result = await invoker.invoke(
-      decision(),
-      adapter,
-      { prompt: 'test' },
-    );
+    const result = await invoker.invoke(decision(), adapter, {
+      prompt: 'test',
+    });
     expect(result.status).toBe('failed');
     // No second adapter, no re-routing — verified by scope
   });
@@ -182,31 +172,21 @@ describe('CheapCloudInvoker', () => {
     const adapter = createAdapter();
 
     const deniedResults: CheapCloudInvokeResult[] = await Promise.all([
-      invoker.invoke(
-        decision({ decision: 'STOP' }),
-        adapter,
-        { prompt: 'test' },
-      ),
-      invoker.invoke(
-        decision({ decision: 'LOCAL' }),
-        adapter,
-        { prompt: 'test' },
-      ),
-      invoker.invoke(
-        decision({ decision: 'STRONG' }),
-        adapter,
-        { prompt: 'test' },
-      ),
-      invoker.invoke(
-        decision({ provider_candidate: null }),
-        adapter,
-        { prompt: 'test' },
-      ),
-      invoker.invoke(
-        decision({ provider_candidate: 'qwen' }),
-        adapter,
-        { prompt: 'test' },
-      ),
+      invoker.invoke(decision({ decision: 'STOP' }), adapter, {
+        prompt: 'test',
+      }),
+      invoker.invoke(decision({ decision: 'LOCAL' }), adapter, {
+        prompt: 'test',
+      }),
+      invoker.invoke(decision({ decision: 'STRONG' }), adapter, {
+        prompt: 'test',
+      }),
+      invoker.invoke(decision({ provider_candidate: null }), adapter, {
+        prompt: 'test',
+      }),
+      invoker.invoke(decision({ provider_candidate: 'qwen' }), adapter, {
+        prompt: 'test',
+      }),
     ]);
 
     for (const result of deniedResults) {

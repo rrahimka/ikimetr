@@ -15,10 +15,7 @@ import { canonicalize } from './canonical.js';
 import { AccountingLedger } from './ledger.js';
 import type { LedgerEvent } from './ledger-events.js';
 import type { ConfigSnapshot } from './snapshot.js';
-import {
-  SingleFlight,
-  type SingleFlightResult,
-} from './single-flight.js';
+import { SingleFlight, type SingleFlightResult } from './single-flight.js';
 import {
   type VerificationEvidence,
   validateVerificationEvidence,
@@ -90,7 +87,10 @@ export class VerifiedCacheRuntime {
     private readonly storage: CacheStorage,
     private readonly ledger: AccountingLedger,
     private readonly cacheEvents: Map<string, CacheEvent>,
-    private readonly approvalDecisions: ReadonlyMap<string, 'approved' | 'denied' | 'revoked'>,
+    private readonly approvalDecisions: ReadonlyMap<
+      string,
+      'approved' | 'denied' | 'revoked'
+    >,
     private readonly configSnapshot?: ConfigSnapshot,
     private readonly verificationAuthority?: VerificationAuthority,
     private readonly sensitiveCodec?: SensitiveCacheCodec,
@@ -119,7 +119,8 @@ export class VerifiedCacheRuntime {
         'Sensitive payload byte ceiling must be a positive safe integer',
       );
     }
-    const ledger = options.ledger ?? (await AccountingLedger.open(options.repositoryRoot));
+    const ledger =
+      options.ledger ?? (await AccountingLedger.open(options.repositoryRoot));
     const events = await ledger.replay();
     const cacheEvents = new Map<string, CacheEvent>();
     const approvalDecisions = new Map<
@@ -182,7 +183,9 @@ export class VerifiedCacheRuntime {
       current.status !== 'ready' ||
       current.head?.entry_hash !== parent.entry_hash
     ) {
-      throw new CacheRuntimeError('Cache parent is not the unique lineage head');
+      throw new CacheRuntimeError(
+        'Cache parent is not the unique lineage head',
+      );
     }
     assertChildOf(parent, entry);
     await this.assertNoTerminalSibling(entry, 'negative');
@@ -773,7 +776,9 @@ export class VerifiedCacheRuntime {
     try {
       await this.ledger.append(event);
     } catch (error) {
-      throw new CacheRuntimeError('Cache audit append failed', { cause: error });
+      throw new CacheRuntimeError('Cache audit append failed', {
+        cause: error,
+      });
     }
     this.cacheEvents.set(event.event_id, event);
   }

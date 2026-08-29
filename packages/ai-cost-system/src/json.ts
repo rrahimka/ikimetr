@@ -13,7 +13,10 @@ const secretPatterns = [
   /(?:api[_-]?key|secret|token|password)\s*[:=]\s*[^\s&]{8,}/iu,
 ] as const;
 
-export function parseJsonStrict(sourceText: string, sourceName: string): unknown {
+export function parseJsonStrict(
+  sourceText: string,
+  sourceName: string,
+): unknown {
   new JsonSyntaxScanner(sourceText, sourceName).scan();
 
   try {
@@ -105,7 +108,10 @@ class JsonSyntaxScanner {
       this.scanString();
       return;
     }
-    if (character === '-' || (character !== undefined && /[0-9]/u.test(character))) {
+    if (
+      character === '-' ||
+      (character !== undefined && /[0-9]/u.test(character))
+    ) {
       this.scanNumber();
       return;
     }

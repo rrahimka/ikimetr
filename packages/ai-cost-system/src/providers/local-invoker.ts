@@ -5,10 +5,7 @@ import type {
   OllamaAdapter,
 } from './ollama-adapter.js';
 
-export type LocalInvokeStatus =
-  | 'success'
-  | 'denied'
-  | 'failed';
+export type LocalInvokeStatus = 'success' | 'denied' | 'failed';
 
 export interface LocalInvokeSuccess {
   readonly status: 'success';
@@ -27,9 +24,7 @@ export interface LocalInvokeFailed {
 }
 
 export type LocalInvokeResult =
-  | LocalInvokeSuccess
-  | LocalInvokeDenied
-  | LocalInvokeFailed;
+  LocalInvokeSuccess | LocalInvokeDenied | LocalInvokeFailed;
 
 export class LocalInvoker {
   public async invoke(

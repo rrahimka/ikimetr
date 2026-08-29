@@ -36,9 +36,9 @@ afterEach(async () => {
   process.env = { ...originalEnv };
   await Promise.all(fixtures.splice(0).map((f) => f.dispose()));
   await Promise.all(
-    temporaryDirectories.splice(0).map((d) =>
-      rm(d, { force: true, recursive: true }),
-    ),
+    temporaryDirectories
+      .splice(0)
+      .map((d) => rm(d, { force: true, recursive: true })),
   );
 });
 
@@ -323,27 +323,33 @@ describe('DeepSeekAdapter Foundation', () => {
   it.each([
     ['invalid raw json', 'raw non-json body'],
     [JSON.stringify({ choices: [] }), 'missing choices element'],
-    [JSON.stringify({ choices: [{ message: { content: 'hi' } }] }), 'missing usage object'],
-  ])('13 & 14 & 15. malformed response (%s) -> MALFORMED_RESPONSE + release', async (body) => {
-    const { adapter, ledger } = await createHarness();
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(body, { status: 200 }),
-    );
+    [
+      JSON.stringify({ choices: [{ message: { content: 'hi' } }] }),
+      'missing usage object',
+    ],
+  ])(
+    '13 & 14 & 15. malformed response (%s) -> MALFORMED_RESPONSE + release',
+    async (body) => {
+      const { adapter, ledger } = await createHarness();
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(body, { status: 200 }),
+      );
 
-    try {
-      await adapter.invoke({ prompt: 'test' });
-      expect.fail('should throw');
-    } catch (err) {
-      expect((err as DeepSeekAdapterError).code).toBe('MALFORMED_RESPONSE');
-    }
-    const events = await ledger.replay();
-    const lastEvent = events.at(-1);
-    if (lastEvent?.event_type === 'AttemptCompleted') {
-      expect(lastEvent.status).toBe('failed');
-    } else {
-      expect.fail('expected AttemptCompleted');
-    }
-  });
+      try {
+        await adapter.invoke({ prompt: 'test' });
+        expect.fail('should throw');
+      } catch (err) {
+        expect((err as DeepSeekAdapterError).code).toBe('MALFORMED_RESPONSE');
+      }
+      const events = await ledger.replay();
+      const lastEvent = events.at(-1);
+      if (lastEvent?.event_type === 'AttemptCompleted') {
+        expect(lastEvent.status).toBe('failed');
+      } else {
+        expect.fail('expected AttemptCompleted');
+      }
+    },
+  );
 
   it('16. API key and raw prompt absent from errors and ledger events', async () => {
     const { adapter, ledger } = await createHarness();
