@@ -154,7 +154,10 @@ function assertUnique(values: readonly string[], label: string): void {
   }
 }
 
-function sameMembers(left: readonly string[], right: readonly string[]): boolean {
+function sameMembers(
+  left: readonly string[],
+  right: readonly string[],
+): boolean {
   if (left.length !== right.length) {
     return false;
   }

@@ -24,9 +24,7 @@ export class SingleFlight<T> {
     const pending = Promise.resolve().then(operation);
     this.active.set(key, pending);
     return pending
-      .then((value) =>
-        Object.freeze({ disposition: 'leader' as const, value }),
-      )
+      .then((value) => Object.freeze({ disposition: 'leader' as const, value }))
       .finally(() => {
         if (this.active.get(key) === pending) {
           this.active.delete(key);

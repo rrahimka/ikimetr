@@ -154,7 +154,10 @@ describe('bounded negative cache', () => {
       denied.storeNegative(
         deniedPending,
         negativeInput(deniedPending, {
-          outcome_reason: { code: 'transient-malformed-result', transient: true },
+          outcome_reason: {
+            code: 'transient-malformed-result',
+            transient: true,
+          },
         }),
       ),
     ).rejects.toBeInstanceOf(CacheRuntimeError);
@@ -172,7 +175,10 @@ describe('bounded negative cache', () => {
       allowed.storeNegative(
         allowedPending,
         negativeInput(allowedPending, {
-          outcome_reason: { code: 'transient-malformed-result', transient: true },
+          outcome_reason: {
+            code: 'transient-malformed-result',
+            transient: true,
+          },
         }),
       ),
     ).resolves.toMatchObject({ state: 'negative' });

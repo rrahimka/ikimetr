@@ -12,10 +12,7 @@ import {
   createMoney,
   type Money,
 } from './money.js';
-import {
-  PricingResolver,
-  type ResolvedPricing,
-} from './pricing.js';
+import { PricingResolver, type ResolvedPricing } from './pricing.js';
 import type { ConfigSnapshot } from './snapshot.js';
 import type { ProviderId } from './schemas.js';
 
@@ -49,10 +46,7 @@ export interface BudgetTotals {
 }
 
 export interface ReplayedBudgetState {
-  readonly activeReservations: ReadonlyMap<
-    string,
-    BudgetReservationRecord
-  >;
+  readonly activeReservations: ReadonlyMap<string, BudgetReservationRecord>;
   readonly recoveryBlockingReservationIds: ReadonlySet<string>;
   readonly settledReservationIds: ReadonlySet<string>;
   readonly totals: BudgetTotals;
@@ -69,7 +63,9 @@ export class BudgetStateError extends Error {
 
 export function budgetScopeKey(...parts: readonly string[]): string {
   if (parts.some((part) => part.includes('|'))) {
-    throw new BudgetStateError('Budget scope part contains a reserved delimiter');
+    throw new BudgetStateError(
+      'Budget scope part contains a reserved delimiter',
+    );
   }
   return parts.join('|');
 }
@@ -105,7 +101,9 @@ function deriveBudgetState(
 
     const record = records.get(event.reservation_id);
     if (record === undefined) {
-      throw new BudgetStateError('Settlement references an unknown reservation');
+      throw new BudgetStateError(
+        'Settlement references an unknown reservation',
+      );
     }
     if (record.settlement !== null) {
       throw new BudgetStateError('Reservation has already been settled');
@@ -131,11 +129,7 @@ function deriveBudgetState(
 
     settledReservationIds.add(reservationId);
     if (record.settlement.disposition === 'settled') {
-      addRecordToTotals(
-        mutableTotals,
-        record.reservation,
-        record.settlement,
-      );
+      addRecordToTotals(mutableTotals, record.reservation, record.settlement);
     }
   }
 
@@ -148,9 +142,7 @@ function deriveBudgetState(
   );
   return Object.freeze({
     activeReservations: freezeMap(activeReservations),
-    recoveryBlockingReservationIds: freezeSet(
-      recoveryBlockingReservationIds,
-    ),
+    recoveryBlockingReservationIds: freezeSet(recoveryBlockingReservationIds),
     settledReservationIds: freezeSet(settledReservationIds),
     totals: freezeTotals(mutableTotals),
     discrepancyCircuitOpen: discrepancyCircuit,
@@ -480,10 +472,7 @@ export class BudgetController {
       );
     }
 
-    if (
-      provider.maxOutputTokens === null ||
-      provider.timeoutMs === null
-    ) {
+    if (provider.maxOutputTokens === null || provider.timeoutMs === null) {
       throw new BudgetControllerError(
         'NOT_CONFIGURED',
         'Provider reservation limits are not configured',
@@ -575,8 +564,7 @@ export class BudgetController {
       request.actualInputTokens > reservation.estimated_input_tokens ||
       request.actualOutputTokens > reservation.reserved_output_tokens ||
       actualCost.amountMicros > reservation.reserved_cost.amountMicros ||
-      request.actualLocalWallTimeMs >
-        reservation.reserved_local_wall_time_ms;
+      request.actualLocalWallTimeMs > reservation.reserved_local_wall_time_ms;
     const event = parseLedgerEvent({
       event_version: 1,
       event_id: request.eventId,
@@ -767,9 +755,7 @@ export class BudgetController {
     checkUsageLimits(providerTask, limits.providerTask, 'provider/task');
     checkUsageLimits(
       requiredUsage(
-        candidate.totals.providerDay.get(
-          budgetScopeKey(event.provider, day),
-        ),
+        candidate.totals.providerDay.get(budgetScopeKey(event.provider, day)),
       ),
       limits.providerDay,
       'provider/day',
@@ -1012,7 +998,9 @@ function validateSettlement(
     throw new BudgetStateError('Settlement scope does not match reservation');
   }
   if (settlement.actual_cost.currency !== reservation.reserved_cost.currency) {
-    throw new BudgetStateError('Settlement currency does not match reservation');
+    throw new BudgetStateError(
+      'Settlement currency does not match reservation',
+    );
   }
 
   const computedOverrun =
@@ -1096,16 +1084,8 @@ function addRecordToTotals(
     budgetScopeKey(reservation.provider, utcMonth),
     usage,
   );
-  addNumber(
-    totals.retryTask,
-    reservation.task_id,
-    usage.retries,
-  );
-  addNumber(
-    totals.retryProviderTask,
-    providerTaskKey,
-    usage.retries,
-  );
+  addNumber(totals.retryTask, reservation.task_id, usage.retries);
+  addNumber(totals.retryProviderTask, providerTaskKey, usage.retries);
   addNumber(
     totals.localWallTimeTask,
     reservation.task_id,

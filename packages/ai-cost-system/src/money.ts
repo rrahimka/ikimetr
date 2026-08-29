@@ -7,10 +7,7 @@ export interface Money {
   readonly amountMicros: number;
 }
 
-export function createMoney(
-  currency: string,
-  amountMicros: number,
-): Money {
+export function createMoney(currency: string, amountMicros: number): Money {
   if (!currencyPattern.test(currency)) {
     throw new TypeError('Money currency must be a three-letter uppercase code');
   }
@@ -37,10 +34,7 @@ export function calculateMicrosForTokens(
   rateMicrosPerMillionTokens: number,
 ): number {
   assertNonNegativeSafeInteger(tokens, 'Token count');
-  assertNonNegativeSafeInteger(
-    rateMicrosPerMillionTokens,
-    'Pricing rate',
-  );
+  assertNonNegativeSafeInteger(rateMicrosPerMillionTokens, 'Pricing rate');
 
   const product = BigInt(tokens) * BigInt(rateMicrosPerMillionTokens);
   const roundedUp =

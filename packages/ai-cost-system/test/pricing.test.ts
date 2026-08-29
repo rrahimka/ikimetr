@@ -56,9 +56,7 @@ async function loadSnapshotWithPricing(
 describe('integer-micros money arithmetic', () => {
   it('rounds fractional micros up without floating-point arithmetic', () => {
     expect(calculateMicrosForTokens(1, 1)).toBe(1);
-    expect(calculateMicrosForTokens(1_000_001, 1_000_000)).toBe(
-      1_000_001,
-    );
+    expect(calculateMicrosForTokens(1_000_001, 1_000_000)).toBe(1_000_001);
   });
 
   it('rejects unsafe integers and overflow', () => {

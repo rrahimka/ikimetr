@@ -15,8 +15,8 @@ const reasonCode = z
   .min(1)
   .max(64)
   .regex(/^[a-z][a-z0-9-]*$/u);
-const utcTimestamp = z
-  .iso.datetime()
+const utcTimestamp = z.iso
+  .datetime()
   .refine((value) => value.endsWith('Z'), 'timestamp must use UTC');
 const versionRecord = z
   .record(boundedVersion, boundedVersion)
@@ -24,11 +24,7 @@ const versionRecord = z
 
 const cacheKeyInputSchema = z
   .object({
-    namespace: z.enum([
-      'provider-request',
-      'verified-artifact',
-      'negative',
-    ]),
+    namespace: z.enum(['provider-request', 'verified-artifact', 'negative']),
     taskId: boundedVersion,
     taskType: boundedVersion,
     dataClass: z.enum(['public', 'internal', 'sensitive']),
@@ -38,13 +34,7 @@ const cacheKeyInputSchema = z
     routingConfigHash: sha256Hex,
     promptVersion: boundedVersion,
     route: z.enum(['deterministic', 'local', 'cheap-cloud', 'strong']),
-    provider: z.enum([
-      'local-ai',
-      'deepseek',
-      'qwen',
-      'codex',
-      'claude',
-    ]),
+    provider: z.enum(['local-ai', 'deepseek', 'qwen', 'codex', 'claude']),
     modelRevision: boundedVersion,
     taskSpecHash: sha256Hex,
     approvedInputHashes: z.array(sha256Hex).max(256),
@@ -59,11 +49,7 @@ const cacheKeyInputSchema = z
 const cacheMetadataSchema = z
   .object({
     schema_version: z.literal(1),
-    namespace: z.enum([
-      'provider-request',
-      'verified-artifact',
-      'negative',
-    ]),
+    namespace: z.enum(['provider-request', 'verified-artifact', 'negative']),
     cache_key: sha256Hex,
     state: z.enum([
       'pending',
@@ -214,9 +200,7 @@ export function buildApprovedInputHash(options: {
   if (options.dataClass === 'secret') {
     throw new CacheSecurityError('Secret data is never cacheable');
   }
-  if (
-    !['public', 'internal', 'sensitive'].includes(options.dataClass)
-  ) {
+  if (!['public', 'internal', 'sensitive'].includes(options.dataClass)) {
     throw new CacheValidationError('Cache data class is invalid');
   }
 

@@ -169,12 +169,7 @@ const decisionDraftSchema = z
       'ERROR',
     ]),
     data_policy_status: z.enum(['ALLOWED', 'DENIED']),
-    approval_status: z.enum([
-      'NOT_REQUIRED',
-      'APPROVED',
-      'REQUIRED',
-      'DENIED',
-    ]),
+    approval_status: z.enum(['NOT_REQUIRED', 'APPROVED', 'REQUIRED', 'DENIED']),
     escalation_allowed: z.boolean(),
     transition_trace: z.array(transitionSchema).min(1).max(32),
   })
@@ -216,7 +211,8 @@ const reasonSummaries: Readonly<Record<RoutingReasonCode, string>> =
     DATA_CLASS_DENIED: 'The provider does not allow the data class.',
     RISK_CLASS_DENIED: 'The provider does not allow the risk class.',
     CAPABILITY_DENIED: 'The provider does not allow the capability.',
-    DATA_POLICY_ALLOWED: 'Provider data, risk, and capability policy allows the request.',
+    DATA_POLICY_ALLOWED:
+      'Provider data, risk, and capability policy allows the request.',
     PRICING_KNOWN: 'A usable pricing snapshot is available.',
     PRICING_STALE: 'Provider pricing is stale.',
     PRICING_UNKNOWN: 'Provider pricing is unknown.',
@@ -228,12 +224,15 @@ const reasonSummaries: Readonly<Record<RoutingReasonCode, string>> =
     APPROVAL_GRANTED: 'Validated ledger approval permits the candidate.',
     APPROVAL_DENIED: 'Validated ledger state denies the required approval.',
     LOCAL_UNAVAILABLE: 'No eligible local provider is available.',
-    LOCAL_INSUFFICIENT: 'Validated evidence shows the local route was insufficient.',
+    LOCAL_INSUFFICIENT:
+      'Validated evidence shows the local route was insufficient.',
     CHEAP_UNAVAILABLE: 'No eligible cheap-cloud provider is available.',
-    CHEAP_INSUFFICIENT: 'Validated evidence shows the cheap-cloud route was insufficient.',
+    CHEAP_INSUFFICIENT:
+      'Validated evidence shows the cheap-cloud route was insufficient.',
     STRONG_UNAVAILABLE: 'No eligible strong provider is available.',
     NO_PROVIDER_AVAILABLE: 'No approved provider can satisfy the request.',
-    REPEATED_REQUEST: 'The same failed request has no new verification evidence.',
+    REPEATED_REQUEST:
+      'The same failed request has no new verification evidence.',
     CONFIG_INVALID: 'The routing configuration is invalid.',
     LEDGER_INVALID: 'The accounting ledger is invalid.',
     POLICY_CONTRADICTION: 'Routing policy inputs are contradictory.',
@@ -259,7 +258,9 @@ export function parseTaskRoutingRequest(value: unknown): TaskRoutingRequest {
 export function parseRoutingDecision(value: unknown): RoutingDecision {
   const decision = routingDecisionSchema.parse(value);
   if (reasonSummaries[decision.reason_code] !== decision.reason_summary) {
-    throw new Error('Routing decision reason summary does not match reason code');
+    throw new Error(
+      'Routing decision reason summary does not match reason code',
+    );
   }
   const { decision_hash: decisionHash, ...hashInput } = decision;
   if (sha256(canonicalize(hashInput)) !== decisionHash) {
@@ -346,11 +347,11 @@ function validateDecisionSemantics(
     });
   }
   if (
-    (draft.decision === 'DETERMINISTIC' &&
-      draft.provider_candidate !== null) ||
+    (draft.decision === 'DETERMINISTIC' && draft.provider_candidate !== null) ||
     (['LOCAL', 'CHEAP_CLOUD', 'STRONG', 'APPROVAL_REQUIRED'].includes(
       draft.decision,
-    ) && draft.provider_candidate === null) ||
+    ) &&
+      draft.provider_candidate === null) ||
     (draft.route === null && draft.provider_candidate !== null)
   ) {
     context.addIssue({

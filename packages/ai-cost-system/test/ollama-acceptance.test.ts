@@ -50,9 +50,9 @@ const now = () => new Date();
 afterEach(async () => {
   await Promise.all(fixtures.splice(0).map((f) => f.dispose()));
   await Promise.all(
-    temporaryDirectories.splice(0).map((d) =>
-      rm(d, { force: true, recursive: true }),
-    ),
+    temporaryDirectories
+      .splice(0)
+      .map((d) => rm(d, { force: true, recursive: true })),
   );
 });
 
@@ -171,79 +171,63 @@ const echoSchema = z
   .strict();
 
 describe('Ollama real acceptance test', () => {
-  it(
-    'health probe confirms model and digest',
-    async () => {
-      const { adapter } = await createHarness();
-      const result = await adapter.health();
-      expect(result.status).toBe('healthy');
-      expect(result.model).toBe(MODEL);
-      expect(result.digest).toBe(DIGEST);
-    },
-    60_000,
-  );
+  it('health probe confirms model and digest', async () => {
+    const { adapter } = await createHarness();
+    const result = await adapter.health();
+    expect(result.status).toBe('healthy');
+    expect(result.model).toBe(MODEL);
+    expect(result.digest).toBe(DIGEST);
+  }, 60_000);
 
-  it(
-    'invoke with simple prompt returns valid response',
-    async () => {
-      const { adapter, ledger } = await createHarness();
-      const result = await adapter.invoke({
-        prompt:
-          'Return exactly this JSON and nothing else: {"echo":"hello"}',
-        temperature: 0,
-        maxTokens: 50,
+  it('invoke with simple prompt returns valid response', async () => {
+    const { adapter, ledger } = await createHarness();
+    const result = await adapter.invoke({
+      prompt: 'Return exactly this JSON and nothing else: {"echo":"hello"}',
+      temperature: 0,
+      maxTokens: 50,
+    });
+
+    expect(result.text).toContain('hello');
+    expect(result.inputTokens).toBeGreaterThan(0);
+    expect(result.outputTokens).toBeGreaterThan(0);
+    expect(result.latencyMs).toBeGreaterThan(0);
+
+    const events = await ledger.replay();
+    const reservations = events.filter(
+      (e) => e.event_type === 'BudgetReservation',
+    );
+    expect(reservations.length).toBe(1);
+
+    const settlements = events.filter(
+      (e) => e.event_type === 'BudgetSettlement' && e.disposition === 'settled',
+    );
+    expect(settlements.length).toBe(1);
+
+    const completed = events.filter(
+      (e) => e.event_type === 'AttemptCompleted' && e.status === 'completed',
+    );
+    expect(completed.length).toBe(1);
+
+    if (completed[0]?.event_type === 'AttemptCompleted') {
+      expect(completed[0].actual_cost).toEqual({
+        currency: 'USD',
+        amountMicros: 0,
       });
+    }
+  }, 60_000);
 
-      expect(result.text).toContain('hello');
-      expect(result.inputTokens).toBeGreaterThan(0);
-      expect(result.outputTokens).toBeGreaterThan(0);
-      expect(result.latencyMs).toBeGreaterThan(0);
+  it('structured invoke validates output schema', async () => {
+    const { adapter } = await createHarness();
+    const result = await adapter.invokeStructured({
+      prompt:
+        'Return exactly this JSON and nothing else: {"echo":"structured-test"}',
+      schema: echoSchema,
+      temperature: 0,
+      maxTokens: 50,
+    });
 
-      const events = await ledger.replay();
-      const reservations = events.filter(
-        (e) => e.event_type === 'BudgetReservation',
-      );
-      expect(reservations.length).toBe(1);
-
-      const settlements = events.filter(
-        (e) =>
-          e.event_type === 'BudgetSettlement' &&
-          e.disposition === 'settled',
-      );
-      expect(settlements.length).toBe(1);
-
-      const completed = events.filter(
-        (e) =>
-          e.event_type === 'AttemptCompleted' && e.status === 'completed',
-      );
-      expect(completed.length).toBe(1);
-
-      if (completed[0]?.event_type === 'AttemptCompleted') {
-        expect(completed[0].actual_cost).toEqual({
-          currency: 'USD',
-          amountMicros: 0,
-        });
-      }
-    },
-    60_000,
-  );
-
-  it(
-    'structured invoke validates output schema',
-    async () => {
-      const { adapter } = await createHarness();
-      const result = await adapter.invokeStructured({
-        prompt:
-          'Return exactly this JSON and nothing else: {"echo":"structured-test"}',
-        schema: echoSchema,
-        temperature: 0,
-        maxTokens: 50,
-      });
-
-      expect(result.parsed).toEqual({ echo: 'structured-test' });
-      expect(result.inputTokens).toBeGreaterThan(0);
-      expect(result.outputTokens).toBeGreaterThan(0);
-    },
-    60_000,
-  );
+    expect(result.parsed).toEqual({ echo: 'structured-test' });
+    expect(result.inputTokens).toBeGreaterThan(0);
+    expect(result.outputTokens).toBeGreaterThan(0);
+  }, 60_000);
 });

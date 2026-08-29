@@ -37,7 +37,8 @@ interface NoneExecuteInput {
   readonly decision: RoutingDecision;
 }
 
-type ExecuteInput = LocalExecuteInput | CheapCloudExecuteInput | NoneExecuteInput;
+type ExecuteInput =
+  LocalExecuteInput | CheapCloudExecuteInput | NoneExecuteInput;
 
 export class ExecutionCoordinator {
   private readonly localInvoker: Pick<LocalInvoker, 'invoke'>;
@@ -51,7 +52,9 @@ export class ExecutionCoordinator {
     this.cheapCloudInvoker = deps.cheapCloudInvoker;
   }
 
-  public async execute(input: ExecuteInput): Promise<ExecutionCoordinatorResult> {
+  public async execute(
+    input: ExecuteInput,
+  ): Promise<ExecutionCoordinatorResult> {
     const { route, decision } = input;
 
     if (

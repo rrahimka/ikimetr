@@ -101,12 +101,7 @@
         "credentialEnv": null
       },
       "allowedDataClasses": ["public", "internal"],
-      "allowedRiskClasses": [
-        "low",
-        "standard",
-        "high",
-        "security-critical"
-      ],
+      "allowedRiskClasses": ["low", "standard", "high", "security-critical"],
       "allowedCapabilities": [
         "routine-analysis",
         "routine-implementation",

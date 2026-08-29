@@ -22,9 +22,7 @@ export interface CheapCloudInvokeFailed {
 }
 
 export type CheapCloudInvokeResult =
-  | CheapCloudInvokeSuccess
-  | CheapCloudInvokeDenied
-  | CheapCloudInvokeFailed;
+  CheapCloudInvokeSuccess | CheapCloudInvokeDenied | CheapCloudInvokeFailed;
 
 export class CheapCloudInvoker {
   public async invoke(
