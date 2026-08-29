@@ -42,6 +42,20 @@ import {
 const MODEL = 'qwen2.5-coder:7b';
 const DIGEST =
   'dae161e27b0e90dd1856c8bb3209201fd6736d8eb66298e75ed87571486f4364';
+const OLLAMA_VERSION_URL = 'http://127.0.0.1:11434/api/version';
+
+async function isOllamaReachable(): Promise<boolean> {
+  try {
+    await fetch(OLLAMA_VERSION_URL, {
+      signal: AbortSignal.timeout(1_000),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const ollamaReachable = await isOllamaReachable();
 
 const fixtures: ConfigFixture[] = [];
 const temporaryDirectories: string[] = [];
@@ -170,7 +184,7 @@ const echoSchema = z
   })
   .strict();
 
-describe('Ollama real acceptance test', () => {
+describe.skipIf(!ollamaReachable)('Ollama real acceptance test', () => {
   it('health probe confirms model and digest', async () => {
     const { adapter } = await createHarness();
     const result = await adapter.health();
