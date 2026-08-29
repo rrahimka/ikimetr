@@ -163,10 +163,7 @@ describe('deterministic cache lineage', () => {
       runtime.storeUnverified(pending, makeUnverifiedInput(pending)),
     ).rejects.toBeInstanceOf(CacheRuntimeError);
     await expect(
-      runtime.storeUnverified(
-        unverified,
-        makeUnverifiedInput(unverified),
-      ),
+      runtime.storeUnverified(unverified, makeUnverifiedInput(unverified)),
     ).rejects.toBeInstanceOf(CacheRuntimeError);
   });
 });
@@ -199,9 +196,10 @@ describe('cache runtime single-flight', () => {
         throw new Error('expected failure');
       }),
     ).rejects.toThrow('expected failure');
-    expect(
-      await runtime.coordinate(shaB, async () => 'retry-result'),
-    ).toEqual({ disposition: 'leader', value: 'retry-result' });
+    expect(await runtime.coordinate(shaB, async () => 'retry-result')).toEqual({
+      disposition: 'leader',
+      value: 'retry-result',
+    });
   });
 });
 
@@ -303,12 +301,7 @@ describe('verified publication and compatibility', () => {
       .filter((event) => event.event_type === 'CacheEvent')
       .map((event) => event.action);
     expect(actions).toEqual(
-      expect.arrayContaining([
-        'lookup',
-        'hit',
-        'verified-reuse',
-        'invalidate',
-      ]),
+      expect.arrayContaining(['lookup', 'hit', 'verified-reuse', 'invalidate']),
     );
   });
 
@@ -399,7 +392,8 @@ describe('verified publication and compatibility', () => {
   });
 
   it('quarantines a structurally valid revision without its write event', async () => {
-    const { snapshot, profileHash, unverified, verifiedInput } = await prepare();
+    const { snapshot, profileHash, unverified, verifiedInput } =
+      await prepare();
     const unaudited = finalizeCacheEntry(verifiedInput);
     const repositoryRoot = await temporaryRepository();
     const storage = await CacheStorage.open(repositoryRoot);
@@ -442,20 +436,15 @@ describe('verified publication and compatibility', () => {
     expect(
       (await ledger.replay()).some(
         (event) =>
-          event.event_type === 'CacheEvent' &&
-          event.action === 'quarantine',
+          event.event_type === 'CacheEvent' && event.action === 'quarantine',
       ),
     ).toBe(true);
     expect(unverified.state).toBe('unverified');
   });
 
   it('quarantines a verified revision with a checksum mismatch', async () => {
-    const {
-      runtime,
-      unverified,
-      verifiedInput,
-      repositoryRoot,
-    } = await prepare();
+    const { runtime, unverified, verifiedInput, repositoryRoot } =
+      await prepare();
     const verified = await runtime.publishVerified(unverified, verifiedInput);
     const revisionPath = join(
       repositoryRoot,

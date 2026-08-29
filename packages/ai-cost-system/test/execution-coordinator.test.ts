@@ -14,9 +14,7 @@ type CheapCloudInvokerShape = Pick<CheapCloudInvoker, 'invoke'>;
 type LocalResult = Awaited<ReturnType<LocalInvoker['invoke']>>;
 type CheapCloudResult = Awaited<ReturnType<CheapCloudInvoker['invoke']>>;
 
-function decision(
-  overrides: Partial<RoutingDecision> = {},
-): RoutingDecision {
+function decision(overrides: Partial<RoutingDecision> = {}): RoutingDecision {
   return {
     decision: 'LOCAL',
     route: 'local',
@@ -30,7 +28,11 @@ function decision(
     escalation_allowed: false,
     transition_trace: [
       { stage: 'CACHE', outcome: 'CONTINUE', reason_code: 'CACHE_MISS' },
-      { stage: 'DETERMINISTIC', outcome: 'CONTINUE', reason_code: 'DETERMINISTIC_UNRESOLVED' },
+      {
+        stage: 'DETERMINISTIC',
+        outcome: 'CONTINUE',
+        reason_code: 'DETERMINISTIC_UNRESOLVED',
+      },
       { stage: 'LOCAL', outcome: 'SELECTED', reason_code: 'ROUTE_SELECTED' },
       { stage: 'FINAL', outcome: 'SELECTED', reason_code: 'ROUTE_SELECTED' },
     ],
@@ -51,9 +53,17 @@ function cheapCloudDecision(
     provider_candidate: 'deepseek',
     transition_trace: [
       { stage: 'CACHE', outcome: 'CONTINUE', reason_code: 'CACHE_MISS' },
-      { stage: 'DETERMINISTIC', outcome: 'CONTINUE', reason_code: 'DETERMINISTIC_UNRESOLVED' },
+      {
+        stage: 'DETERMINISTIC',
+        outcome: 'CONTINUE',
+        reason_code: 'DETERMINISTIC_UNRESOLVED',
+      },
       { stage: 'LOCAL', outcome: 'SKIPPED', reason_code: 'LOCAL_UNAVAILABLE' },
-      { stage: 'CHEAP_CLOUD', outcome: 'SELECTED', reason_code: 'ROUTE_SELECTED' },
+      {
+        stage: 'CHEAP_CLOUD',
+        outcome: 'SELECTED',
+        reason_code: 'ROUTE_SELECTED',
+      },
       { stage: 'FINAL', outcome: 'SELECTED', reason_code: 'ROUTE_SELECTED' },
     ],
     ...overrides,
@@ -71,7 +81,12 @@ const dummyDeepSeekAdapter = {
 function createLocalInvoker(result?: LocalResult | Error) {
   const defaultResult: LocalResult = {
     status: 'success',
-    result: { text: 'local-response', inputTokens: 1, outputTokens: 2, latencyMs: 10 },
+    result: {
+      text: 'local-response',
+      inputTokens: 1,
+      outputTokens: 2,
+      latencyMs: 10,
+    },
   };
   return {
     invoke: vi
@@ -87,7 +102,12 @@ function createLocalInvoker(result?: LocalResult | Error) {
 function createCheapCloudInvoker(result?: CheapCloudResult | Error) {
   const defaultResult: CheapCloudResult = {
     status: 'success',
-    result: { text: 'cloud-response', inputTokens: 3, outputTokens: 4, latencyMs: 50 },
+    result: {
+      text: 'cloud-response',
+      inputTokens: 3,
+      outputTokens: 4,
+      latencyMs: 50,
+    },
   };
   return {
     invoke: vi
@@ -113,7 +133,9 @@ describe('ExecutionCoordinator', () => {
       route: 'local',
       decision: decision(),
       adapter: dummyOllamaAdapter as never,
-      params: { prompt: 'test' } satisfies Parameters<LocalInvoker['invoke']>[2],
+      params: { prompt: 'test' } satisfies Parameters<
+        LocalInvoker['invoke']
+      >[2],
     });
 
     expect(localMock.invoke).toHaveBeenCalledOnce();
@@ -132,7 +154,9 @@ describe('ExecutionCoordinator', () => {
       route: 'local',
       decision: decision(),
       adapter: dummyOllamaAdapter as never,
-      params: { prompt: 'test' } satisfies Parameters<LocalInvoker['invoke']>[2],
+      params: { prompt: 'test' } satisfies Parameters<
+        LocalInvoker['invoke']
+      >[2],
     });
 
     expect(cheapMock.invoke).not.toHaveBeenCalled();
@@ -150,7 +174,9 @@ describe('ExecutionCoordinator', () => {
       route: 'cheap-cloud',
       decision: cheapCloudDecision(),
       adapter: dummyDeepSeekAdapter,
-      params: { prompt: 'test' } satisfies Parameters<CheapCloudInvoker['invoke']>[2],
+      params: { prompt: 'test' } satisfies Parameters<
+        CheapCloudInvoker['invoke']
+      >[2],
     });
 
     expect(cheapMock.invoke).toHaveBeenCalledOnce();
@@ -169,7 +195,9 @@ describe('ExecutionCoordinator', () => {
       route: 'cheap-cloud',
       decision: cheapCloudDecision(),
       adapter: dummyDeepSeekAdapter,
-      params: { prompt: 'test' } satisfies Parameters<CheapCloudInvoker['invoke']>[2],
+      params: { prompt: 'test' } satisfies Parameters<
+        CheapCloudInvoker['invoke']
+      >[2],
     });
 
     expect(localMock.invoke).not.toHaveBeenCalled();
@@ -223,7 +251,9 @@ describe('ExecutionCoordinator', () => {
       route: 'cheap-cloud',
       decision: cheapCloudDecision({ provider_candidate: 'qwen' }),
       adapter: dummyDeepSeekAdapter,
-      params: { prompt: 'test' } satisfies Parameters<CheapCloudInvoker['invoke']>[2],
+      params: { prompt: 'test' } satisfies Parameters<
+        CheapCloudInvoker['invoke']
+      >[2],
     });
 
     expect(result.status).toBe('denied');
@@ -243,7 +273,9 @@ describe('ExecutionCoordinator', () => {
       route: 'local',
       decision: decision({ provider_candidate: 'deepseek' }),
       adapter: dummyOllamaAdapter as never,
-      params: { prompt: 'test' } satisfies Parameters<LocalInvoker['invoke']>[2],
+      params: { prompt: 'test' } satisfies Parameters<
+        LocalInvoker['invoke']
+      >[2],
     });
 
     expect(result.status).toBe('denied');
@@ -263,7 +295,9 @@ describe('ExecutionCoordinator', () => {
       route: 'local',
       decision: decision(),
       adapter: dummyOllamaAdapter as never,
-      params: { prompt: 'test' } satisfies Parameters<LocalInvoker['invoke']>[2],
+      params: { prompt: 'test' } satisfies Parameters<
+        LocalInvoker['invoke']
+      >[2],
     });
 
     expect(localMock.invoke).toHaveBeenCalledOnce();
@@ -281,7 +315,9 @@ describe('ExecutionCoordinator', () => {
       route: 'cheap-cloud',
       decision: cheapCloudDecision(),
       adapter: dummyDeepSeekAdapter,
-      params: { prompt: 'test' } satisfies Parameters<CheapCloudInvoker['invoke']>[2],
+      params: { prompt: 'test' } satisfies Parameters<
+        CheapCloudInvoker['invoke']
+      >[2],
     });
 
     expect(cheapMock.invoke).toHaveBeenCalledOnce();
@@ -304,7 +340,9 @@ describe('ExecutionCoordinator', () => {
       route: 'local',
       decision: decision(),
       adapter: dummyOllamaAdapter as never,
-      params: { prompt: 'test' } satisfies Parameters<LocalInvoker['invoke']>[2],
+      params: { prompt: 'test' } satisfies Parameters<
+        LocalInvoker['invoke']
+      >[2],
     });
 
     expect(result.status).toBe('failed');
@@ -329,7 +367,9 @@ describe('ExecutionCoordinator', () => {
       route: 'cheap-cloud',
       decision: cheapCloudDecision(),
       adapter: dummyDeepSeekAdapter,
-      params: { prompt: 'test' } satisfies Parameters<CheapCloudInvoker['invoke']>[2],
+      params: { prompt: 'test' } satisfies Parameters<
+        CheapCloudInvoker['invoke']
+      >[2],
     });
 
     expect(result.status).toBe('failed');
@@ -340,7 +380,12 @@ describe('ExecutionCoordinator', () => {
   it('13. LocalInvoker result is returned to caller unchanged', async () => {
     const invokeResult: LocalResult = {
       status: 'success',
-      result: { text: 'exact-result', inputTokens: 7, outputTokens: 8, latencyMs: 99 },
+      result: {
+        text: 'exact-result',
+        inputTokens: 7,
+        outputTokens: 8,
+        latencyMs: 99,
+      },
     };
     const localMock = createLocalInvoker(invokeResult);
     const cheapMock = createCheapCloudInvoker();
@@ -353,7 +398,9 @@ describe('ExecutionCoordinator', () => {
       route: 'local',
       decision: decision(),
       adapter: dummyOllamaAdapter as never,
-      params: { prompt: 'test' } satisfies Parameters<LocalInvoker['invoke']>[2],
+      params: { prompt: 'test' } satisfies Parameters<
+        LocalInvoker['invoke']
+      >[2],
     });
 
     expect(result).toEqual(invokeResult);
@@ -362,7 +409,12 @@ describe('ExecutionCoordinator', () => {
   it('14. CheapCloudInvoker result is returned to caller unchanged', async () => {
     const invokeResult: CheapCloudResult = {
       status: 'success',
-      result: { text: 'exact-cloud', inputTokens: 9, outputTokens: 10, latencyMs: 88 },
+      result: {
+        text: 'exact-cloud',
+        inputTokens: 9,
+        outputTokens: 10,
+        latencyMs: 88,
+      },
     };
     const localMock = createLocalInvoker();
     const cheapMock = createCheapCloudInvoker(invokeResult);
@@ -375,7 +427,9 @@ describe('ExecutionCoordinator', () => {
       route: 'cheap-cloud',
       decision: cheapCloudDecision(),
       adapter: dummyDeepSeekAdapter,
-      params: { prompt: 'test' } satisfies Parameters<CheapCloudInvoker['invoke']>[2],
+      params: { prompt: 'test' } satisfies Parameters<
+        CheapCloudInvoker['invoke']
+      >[2],
     });
 
     expect(result).toEqual(invokeResult);
@@ -393,7 +447,9 @@ describe('ExecutionCoordinator', () => {
       route: 'cheap-cloud',
       decision: decision(),
       adapter: dummyDeepSeekAdapter,
-      params: { prompt: 'test' } satisfies Parameters<CheapCloudInvoker['invoke']>[2],
+      params: { prompt: 'test' } satisfies Parameters<
+        CheapCloudInvoker['invoke']
+      >[2],
     });
 
     expect(result.status).toBe('denied');
@@ -413,7 +469,9 @@ describe('ExecutionCoordinator', () => {
       route: 'local',
       decision: cheapCloudDecision(),
       adapter: dummyOllamaAdapter as never,
-      params: { prompt: 'test' } satisfies Parameters<LocalInvoker['invoke']>[2],
+      params: { prompt: 'test' } satisfies Parameters<
+        LocalInvoker['invoke']
+      >[2],
     });
 
     expect(result.status).toBe('denied');

@@ -1,20 +1,11 @@
-import {
-  copyFile,
-  mkdtemp,
-  readFile,
-  rm,
-  writeFile,
-} from 'node:fs/promises';
+import { copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import {
-  ConfigValidationError,
-  loadConfigSnapshot,
-} from '../src/index.js';
+import { ConfigValidationError, loadConfigSnapshot } from '../src/index.js';
 
 const configurationFileNames = [
   'router.json',
@@ -27,9 +18,7 @@ const configurationFileNames = [
 type ConfigurationFileName = (typeof configurationFileNames)[number];
 type JsonObject = Record<string, unknown>;
 
-const repositoryRoot = fileURLToPath(
-  new URL('../../../', import.meta.url),
-);
+const repositoryRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const bootstrapConfigDirectory = join(repositoryRoot, 'config', 'ai-cost');
 const temporaryDirectories: string[] = [];
 
@@ -102,9 +91,7 @@ describe('AI Cost System configuration foundation', () => {
     expect(Object.keys(snapshot.sourceFileHashes).sort()).toEqual(
       [...configurationFileNames].sort(),
     );
-    expect(snapshot.sourceFileHashes['router.json']).toMatch(
-      /^[a-f0-9]{64}$/u,
-    );
+    expect(snapshot.sourceFileHashes['router.json']).toMatch(/^[a-f0-9]{64}$/u);
   });
 
   it('rejects an unknown field', async () => {
@@ -262,9 +249,7 @@ describe('AI Cost System configuration foundation', () => {
       'utf8',
     );
 
-    const originalSnapshot = await loadConfigSnapshot(
-      bootstrapConfigDirectory,
-    );
+    const originalSnapshot = await loadConfigSnapshot(bootstrapConfigDirectory);
     const reorderedSnapshot = await loadConfigSnapshot(directory);
 
     expect(reorderedSnapshot.configHash).toBe(originalSnapshot.configHash);
@@ -281,9 +266,7 @@ describe('AI Cost System configuration foundation', () => {
     localRoute['approvalRequired'] = true;
     await writeJsonObject(directory, 'router.json', router);
 
-    const originalSnapshot = await loadConfigSnapshot(
-      bootstrapConfigDirectory,
-    );
+    const originalSnapshot = await loadConfigSnapshot(bootstrapConfigDirectory);
     const changedSnapshot = await loadConfigSnapshot(directory);
 
     expect(changedSnapshot.configHash).not.toBe(originalSnapshot.configHash);
@@ -297,9 +280,7 @@ describe('AI Cost System configuration foundation', () => {
     localProvider['allowedRiskClasses'] = ['low', 'standard'];
     await writeJsonObject(directory, 'providers.json', providersConfig);
 
-    const originalSnapshot = await loadConfigSnapshot(
-      bootstrapConfigDirectory,
-    );
+    const originalSnapshot = await loadConfigSnapshot(bootstrapConfigDirectory);
     const changedSnapshot = await loadConfigSnapshot(directory);
 
     expect(changedSnapshot.configHash).not.toBe(originalSnapshot.configHash);

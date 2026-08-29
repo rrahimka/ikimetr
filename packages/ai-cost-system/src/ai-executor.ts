@@ -5,14 +5,15 @@ import type { ExecutionCoordinator } from './providers/execution-coordinator.js'
 import type { LocalInvoker } from './providers/local-invoker.js';
 
 type AiExecutorResult =
-  | RoutingDecision
-  | Awaited<ReturnType<ExecutionCoordinator['execute']>>;
+  RoutingDecision | Awaited<ReturnType<ExecutionCoordinator['execute']>>;
 
 export class AiExecutor {
   private readonly router: Pick<CostRouter, 'evaluate'>;
   private readonly coordinator: Pick<ExecutionCoordinator, 'execute'>;
   private readonly localAdapter: Parameters<LocalInvoker['invoke']>[1];
-  private readonly cheapCloudAdapter: Parameters<CheapCloudInvoker['invoke']>[1];
+  private readonly cheapCloudAdapter: Parameters<
+    CheapCloudInvoker['invoke']
+  >[1];
 
   public constructor(deps: {
     readonly router: Pick<CostRouter, 'evaluate'>;

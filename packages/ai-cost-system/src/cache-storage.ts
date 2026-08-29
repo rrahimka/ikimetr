@@ -105,10 +105,7 @@ export class CacheStorage {
       try {
         handle = await open(
           temporaryPath,
-          constants.O_CREAT |
-            constants.O_EXCL |
-            constants.O_WRONLY |
-            noFollow,
+          constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | noFollow,
           0o600,
         );
         const bytes = Buffer.from(serialized, 'utf8');
@@ -143,7 +140,9 @@ export class CacheStorage {
         await rename(temporaryPath, finalPath);
         const persisted = await readRevisionFile(finalPath);
         if (canonicalize(persisted) !== serialized) {
-          throw new CacheStorageError('Published cache revision failed verification');
+          throw new CacheStorageError(
+            'Published cache revision failed verification',
+          );
         }
         return Object.freeze({ disposition: 'written' as const });
       } catch (error) {
@@ -272,7 +271,11 @@ async function ensureDirectory(
     }
     metadata = await safeLstat(path);
   }
-  if (metadata === null || metadata.isSymbolicLink() || !metadata.isDirectory()) {
+  if (
+    metadata === null ||
+    metadata.isSymbolicLink() ||
+    !metadata.isDirectory()
+  ) {
     throw new CacheStorageError('Cache storage directory is unsafe');
   }
   const resolved = await realpath(path);
@@ -338,7 +341,9 @@ function assertContained(parent: string, child: string): void {
   }
 }
 
-async function safeLstat(path: string): Promise<Awaited<ReturnType<typeof lstat>> | null> {
+async function safeLstat(
+  path: string,
+): Promise<Awaited<ReturnType<typeof lstat>> | null> {
   try {
     return await lstat(path);
   } catch (error) {

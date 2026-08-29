@@ -82,8 +82,7 @@ export class PolicyEvaluator {
     request: TaskRoutingRequest,
     providerId: ProviderId,
   ): PolicyResult {
-    const provider =
-      this.config.configuration.providers.providers[providerId];
+    const provider = this.config.configuration.providers.providers[providerId];
     if (!provider.enabled) {
       return Object.freeze({
         allowed: false,
@@ -123,10 +122,7 @@ export class PolicyEvaluator {
         reason_code: 'CAPABILITY_DENIED' as const,
       });
     }
-    if (
-      providerId === 'local-ai' &&
-      !localAiWhitelist.has(request.purpose)
-    ) {
+    if (providerId === 'local-ai' && !localAiWhitelist.has(request.purpose)) {
       return Object.freeze({
         allowed: false,
         reason_code: 'LOCAL_TASK_NOT_ALLOWED' as const,
@@ -151,15 +147,15 @@ export function createRoutingDecision(
   value: RoutingDecisionDraft,
   configHash: string,
 ): RoutingDecision {
-    const draft = parseRoutingDecisionDraft(value);
-    const withoutHash = {
-      ...draft,
-      reason_summary: routingReasonSummary(draft.reason_code),
-      config_hash: configHash,
-      request_hash: hashTaskRoutingRequest(request),
-    };
-    return parseRoutingDecision({
-      ...withoutHash,
-      decision_hash: sha256(canonicalize(withoutHash)),
-    });
+  const draft = parseRoutingDecisionDraft(value);
+  const withoutHash = {
+    ...draft,
+    reason_summary: routingReasonSummary(draft.reason_code),
+    config_hash: configHash,
+    request_hash: hashTaskRoutingRequest(request),
+  };
+  return parseRoutingDecision({
+    ...withoutHash,
+    decision_hash: sha256(canonicalize(withoutHash)),
+  });
 }

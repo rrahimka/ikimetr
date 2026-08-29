@@ -74,10 +74,8 @@ export class PricingResolver {
       provider: snapshot.provider,
       model: snapshot.model,
       currency: snapshot.currency,
-      inputRateMicrosPerMillionTokens:
-        snapshot.inputRatePerMillionTokens,
-      outputRateMicrosPerMillionTokens:
-        snapshot.outputRatePerMillionTokens,
+      inputRateMicrosPerMillionTokens: snapshot.inputRatePerMillionTokens,
+      outputRateMicrosPerMillionTokens: snapshot.outputRatePerMillionTokens,
       cacheReadRateMicrosPerMillionTokens:
         snapshot.cacheReadRatePerMillionTokens,
       cacheWriteRateMicrosPerMillionTokens:
@@ -86,10 +84,7 @@ export class PricingResolver {
     });
   }
 
-  public calculateCost(
-    pricing: ResolvedPricing,
-    usage: TokenUsage,
-  ) {
+  public calculateCost(pricing: ResolvedPricing, usage: TokenUsage) {
     let total = createMoney(pricing.currency, 0);
     const charge = (tokens: number, rate: number | null, label: string) => {
       if (rate === null) {
@@ -100,10 +95,7 @@ export class PricingResolver {
       }
       total = addMoney(
         total,
-        createMoney(
-          pricing.currency,
-          calculateMicrosForTokens(tokens, rate),
-        ),
+        createMoney(pricing.currency, calculateMicrosForTokens(tokens, rate)),
       );
     };
 

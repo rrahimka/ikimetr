@@ -50,18 +50,18 @@ const OLLAMA_BASE_URL =
 // İkiMetr V1 production runtime flow (no app imports @ikimetr/ai-cost-system),
 // so its absence must not turn the core release red. The suite still runs when
 // a reachable Ollama endpoint is present.
-async function ollamaReachable(): Promise<boolean> {
+async function isOllamaReachable(): Promise<boolean> {
   try {
-    const res = await fetch(`${OLLAMA_BASE_URL}/api/health`, {
-      signal: AbortSignal.timeout(2000),
+    const response = await fetch(`${OLLAMA_BASE_URL}/api/version`, {
+      signal: AbortSignal.timeout(1_000),
     });
-    return res.ok;
+    return response.ok;
   } catch {
     return false;
   }
 }
 
-const ollamaAvailable = await ollamaReachable();
+const ollamaAvailable = await isOllamaReachable();
 
 const fixtures: ConfigFixture[] = [];
 const temporaryDirectories: string[] = [];

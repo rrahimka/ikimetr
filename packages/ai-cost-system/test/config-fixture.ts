@@ -1,18 +1,9 @@
-import {
-  copyFile,
-  mkdtemp,
-  readFile,
-  rm,
-  writeFile,
-} from 'node:fs/promises';
+import { copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import {
-  type ConfigSnapshot,
-  loadConfigSnapshot,
-} from '../src/index.js';
+import { type ConfigSnapshot, loadConfigSnapshot } from '../src/index.js';
 
 const configurationFileNames = [
   'router.json',
@@ -22,8 +13,7 @@ const configurationFileNames = [
   'verification.json',
 ] as const;
 
-export type ConfigurationFileName =
-  (typeof configurationFileNames)[number];
+export type ConfigurationFileName = (typeof configurationFileNames)[number];
 export type JsonObject = Record<string, unknown>;
 
 const repositoryRoot = fileURLToPath(new URL('../../../', import.meta.url));
@@ -36,10 +26,7 @@ export const bootstrapConfigDirectory = join(
 export interface ConfigFixture {
   readonly directory: string;
   read(fileName: ConfigurationFileName): Promise<JsonObject>;
-  write(
-    fileName: ConfigurationFileName,
-    value: JsonObject,
-  ): Promise<void>;
+  write(fileName: ConfigurationFileName, value: JsonObject): Promise<void>;
   load(): Promise<ConfigSnapshot>;
   dispose(): Promise<void>;
 }

@@ -10,10 +10,7 @@ import type {
 import { canonicalize, sha256 } from './canonical.js';
 import type { AccountingLedger } from './ledger.js';
 import { parseLedgerEvent } from './ledger-events.js';
-import {
-  createRoutingDecision,
-  PolicyEvaluator,
-} from './policy-evaluator.js';
+import { createRoutingDecision, PolicyEvaluator } from './policy-evaluator.js';
 import type { PricingResolver } from './pricing.js';
 import {
   approvalScopes,
@@ -59,7 +56,10 @@ export interface RoutingRuntimeContext {
 
 const sha256Hex = z.string().regex(/^[a-f0-9]{64}$/u);
 const identifier = z.string().min(1).max(128);
-const versionRecord = z.record(z.string().min(1).max(64), z.string().min(1).max(128));
+const versionRecord = z.record(
+  z.string().min(1).max(64),
+  z.string().min(1).max(128),
+);
 const cacheContextSchema = z
   .object({
     cache_key: sha256Hex,
@@ -91,12 +91,13 @@ const runtimeContextSchema = z
   })
   .strict();
 
-const stageByRoute: Readonly<Record<Exclude<RoutingRoute, 'deterministic'>, RoutingStage>> =
-  Object.freeze({
-    local: 'LOCAL',
-    'cheap-cloud': 'CHEAP_CLOUD',
-    strong: 'STRONG',
-  });
+const stageByRoute: Readonly<
+  Record<Exclude<RoutingRoute, 'deterministic'>, RoutingStage>
+> = Object.freeze({
+  local: 'LOCAL',
+  'cheap-cloud': 'CHEAP_CLOUD',
+  strong: 'STRONG',
+});
 
 const invalidConfigHash = sha256(
   canonicalize({ schema_version: 1, status: 'invalid-config' }),
@@ -164,24 +165,18 @@ export class CostRouter {
     context: RoutingRuntimeContext,
   ): Promise<RoutingDecision> {
     if (!this.configValid) {
-      return this.createStopWithoutAudit(
-        request,
-        'CONFIG_INVALID',
-        'SKIPPED',
-        [transition('CACHE', 'DENIED', 'CONFIG_INVALID')],
-      );
+      return this.createStopWithoutAudit(request, 'CONFIG_INVALID', 'SKIPPED', [
+        transition('CACHE', 'DENIED', 'CONFIG_INVALID'),
+      ]);
     }
 
     let events;
     try {
       events = await this.ledger.replay();
     } catch {
-      return this.createStopWithoutAudit(
-        request,
-        'LEDGER_INVALID',
-        'SKIPPED',
-        [transition('CACHE', 'DENIED', 'LEDGER_INVALID')],
-      );
+      return this.createStopWithoutAudit(request, 'LEDGER_INVALID', 'SKIPPED', [
+        transition('CACHE', 'DENIED', 'LEDGER_INVALID'),
+      ]);
     }
     const state = deriveRoutingState(events, request.task_id);
     const trace: RoutingTransition[] = [];
@@ -202,11 +197,7 @@ export class CostRouter {
 
     if (this.evaluator.isDeterministicCapability(request)) {
       trace.push(
-        transition(
-          'DETERMINISTIC',
-          'SELECTED',
-          'DETERMINISTIC_CAPABILITY',
-        ),
+        transition('DETERMINISTIC', 'SELECTED', 'DETERMINISTIC_CAPABILITY'),
       );
       return this.audit(
         request,
@@ -226,11 +217,7 @@ export class CostRouter {
       );
     }
     trace.push(
-      transition(
-        'DETERMINISTIC',
-        'CONTINUE',
-        'DETERMINISTIC_UNRESOLVED',
-      ),
+      transition('DETERMINISTIC', 'CONTINUE', 'DETERMINISTIC_UNRESOLVED'),
     );
 
     const requestHash = hashTaskRoutingRequest(request);
@@ -320,11 +307,7 @@ export class CostRouter {
       if (!isCacheContextCompatible(candidate, request, this.config)) {
         trace.push(transition('CACHE', 'DENIED', 'POLICY_CONTRADICTION'));
         return {
-          decision: stopDraft(
-            'POLICY_CONTRADICTION',
-            'INVALIDATED',
-            trace,
-          ),
+          decision: stopDraft('POLICY_CONTRADICTION', 'INVALIDATED', trace),
           cacheStatus: 'INVALIDATED',
         };
       }
@@ -395,11 +378,7 @@ export class CostRouter {
     if (dataClass === 'secret') {
       trace.push(transition(stage, 'DENIED', 'SECRET_DATA_DENIED'));
       return {
-        decision: stopDraft(
-          'SECRET_DATA_DENIED',
-          cacheStatus,
-          trace,
-        ),
+        decision: stopDraft('SECRET_DATA_DENIED', cacheStatus, trace),
         reasonCode: 'SECRET_DATA_DENIED',
         pricingStatus: 'NOT_APPLICABLE',
       };
@@ -441,7 +420,8 @@ export class CostRouter {
           pricingSnapshot?.status === 'stale'
             ? 'PRICING_STALE'
             : 'PRICING_UNKNOWN';
-        pricingStatus = pricingSnapshot?.status === 'stale' ? 'STALE' : 'UNKNOWN';
+        pricingStatus =
+          pricingSnapshot?.status === 'stale' ? 'STALE' : 'UNKNOWN';
         sawPricingFailure = true;
         trace.push(transition(stage, 'SKIPPED', reason));
         lastReason = reason;

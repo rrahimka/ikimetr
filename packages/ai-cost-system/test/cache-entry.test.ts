@@ -162,9 +162,7 @@ describe('strict canonical cache entries', () => {
     expect(() =>
       finalizeCacheEntry({ ...draft, cache_key: derivedKey }),
     ).not.toThrow();
-    expect(() => finalizeCacheEntry(draft)).toThrow(
-      CacheEntryValidationError,
-    );
+    expect(() => finalizeCacheEntry(draft)).toThrow(CacheEntryValidationError);
   });
 
   it('rejects a provider self-marked verified revision', () => {

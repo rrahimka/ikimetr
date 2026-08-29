@@ -15,17 +15,11 @@ const reasonCode = z
   .max(64)
   .regex(/^[a-z][a-z0-9-]*$/u);
 const sha256Hex = z.string().regex(/^[a-f0-9]{64}$/u);
-const utcTimestamp = z
-  .iso.datetime()
+const utcTimestamp = z.iso
+  .datetime()
   .refine((value) => value.endsWith('Z'), 'timestamp must use UTC');
 const safeNonNegativeInteger = z.number().int().nonnegative().safe();
-const provider = z.enum([
-  'local-ai',
-  'deepseek',
-  'qwen',
-  'codex',
-  'claude',
-]);
+const provider = z.enum(['local-ai', 'deepseek', 'qwen', 'codex', 'claude']);
 const route = z.enum(['deterministic', 'local', 'cheap-cloud', 'strong']);
 const money = z
   .object({
@@ -152,13 +146,7 @@ const cacheEvent = baseEvent
       .default(null),
     entry_hash: sha256Hex.nullable().default(null),
     state: z
-      .enum([
-        'pending',
-        'unverified',
-        'verified',
-        'negative',
-        'quarantined',
-      ])
+      .enum(['pending', 'unverified', 'verified', 'negative', 'quarantined'])
       .nullable()
       .default(null),
     result_hash: sha256Hex.nullable(),
@@ -251,12 +239,7 @@ const routingDecisionEvent = baseEvent
       'ERROR',
     ]),
     data_policy_status: z.enum(['ALLOWED', 'DENIED']),
-    approval_status: z.enum([
-      'NOT_REQUIRED',
-      'APPROVED',
-      'REQUIRED',
-      'DENIED',
-    ]),
+    approval_status: z.enum(['NOT_REQUIRED', 'APPROVED', 'REQUIRED', 'DENIED']),
     escalation_allowed: z.boolean(),
     transition_trace_hash: sha256Hex,
   })

@@ -61,7 +61,10 @@ const nullableNonNegativeInteger = z
   .nonnegative()
   .safe()
   .nullable();
-const envVariableName = z.string().regex(/^[A-Z][A-Z0-9_]*$/u).nullable();
+const envVariableName = z
+  .string()
+  .regex(/^[A-Z][A-Z0-9_]*$/u)
+  .nullable();
 
 const moneyLimitSchema = z
   .object({
@@ -73,9 +76,7 @@ const moneyLimitSchema = z
 const retryPolicySchema = z
   .object({
     maxRetries: nullableNonNegativeInteger,
-    retryOn: z
-      .array(z.enum(['timeout', 'rate-limit', 'server-error']))
-      .max(3),
+    retryOn: z.array(z.enum(['timeout', 'rate-limit', 'server-error'])).max(3),
     backoff: z.enum(['none', 'fixed', 'exponential']),
   })
   .strict();
@@ -165,19 +166,13 @@ const routerSchema = z
           .strict(),
         'cheap-cloud': z
           .object({
-            providers: z.tuple([
-              z.literal('deepseek'),
-              z.literal('qwen'),
-            ]),
+            providers: z.tuple([z.literal('deepseek'), z.literal('qwen')]),
             approvalRequired: z.boolean(),
           })
           .strict(),
         strong: z
           .object({
-            providers: z.tuple([
-              z.literal('codex'),
-              z.literal('claude'),
-            ]),
+            providers: z.tuple([z.literal('codex'), z.literal('claude')]),
             approvalRequired: z.boolean(),
           })
           .strict(),
@@ -318,7 +313,10 @@ const pricingSnapshotSchema = z
   .object({
     provider: z.enum(providerIds),
     model: z.string().min(1).nullable(),
-    currency: z.string().regex(/^[A-Z]{3}$/u).nullable(),
+    currency: z
+      .string()
+      .regex(/^[A-Z]{3}$/u)
+      .nullable(),
     inputRatePerMillionTokens: nullableNonNegativeInteger,
     outputRatePerMillionTokens: nullableNonNegativeInteger,
     cacheReadRatePerMillionTokens: nullableNonNegativeInteger,
@@ -441,9 +439,8 @@ const verificationSchema = z
     } as const;
 
     for (const [commandId, args] of Object.entries(commandExpectations)) {
-      const command = configuration.commands[
-        commandId as keyof typeof commandExpectations
-      ];
+      const command =
+        configuration.commands[commandId as keyof typeof commandExpectations];
       if (
         !command.enabled ||
         command.optional ||

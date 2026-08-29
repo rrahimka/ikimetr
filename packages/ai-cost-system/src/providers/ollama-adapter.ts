@@ -307,15 +307,18 @@ export class OllamaAdapter {
       const isMalformed =
         error instanceof OllamaAdapterError &&
         error.code === 'MALFORMED_RESPONSE';
-      const status = isTimeout ? 'timeout' : isMalformed ? 'malformed' : 'unavailable';
-      const reason = isTimeout ? 'health-timeout' : isMalformed ? 'malformed-response' : 'health-error';
+      const status = isTimeout
+        ? 'timeout'
+        : isMalformed
+          ? 'malformed'
+          : 'unavailable';
+      const reason = isTimeout
+        ? 'health-timeout'
+        : isMalformed
+          ? 'malformed-response'
+          : 'health-error';
 
-      await this.appendHealthEvent(
-        healthEventId,
-        status,
-        latencyMs,
-        reason,
-      );
+      await this.appendHealthEvent(healthEventId, status, latencyMs, reason);
 
       return {
         status,
@@ -420,8 +423,12 @@ export class OllamaAdapter {
         prompt: params.prompt,
         format: 'json',
         ...(params.system !== undefined ? { system: params.system } : {}),
-        ...(params.temperature !== undefined ? { temperature: params.temperature } : {}),
-        ...(params.maxTokens !== undefined ? { maxTokens: params.maxTokens } : {}),
+        ...(params.temperature !== undefined
+          ? { temperature: params.temperature }
+          : {}),
+        ...(params.maxTokens !== undefined
+          ? { maxTokens: params.maxTokens }
+          : {}),
       };
 
       const result = await this.invokeInternal(
@@ -561,10 +568,7 @@ export class OllamaAdapter {
     } catch (error) {
       clearTimeout(timeout);
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new OllamaAdapterError(
-          'TIMEOUT',
-          'Ollama invocation timed out',
-        );
+        throw new OllamaAdapterError('TIMEOUT', 'Ollama invocation timed out');
       }
       throw new OllamaAdapterError(
         'NETWORK_ERROR',

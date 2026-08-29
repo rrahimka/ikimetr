@@ -30,7 +30,11 @@ function localDecision(): RoutingDecision {
     escalation_allowed: false,
     transition_trace: [
       { stage: 'CACHE', outcome: 'CONTINUE', reason_code: 'CACHE_MISS' },
-      { stage: 'DETERMINISTIC', outcome: 'CONTINUE', reason_code: 'DETERMINISTIC_UNRESOLVED' },
+      {
+        stage: 'DETERMINISTIC',
+        outcome: 'CONTINUE',
+        reason_code: 'DETERMINISTIC_UNRESOLVED',
+      },
       { stage: 'LOCAL', outcome: 'SELECTED', reason_code: 'ROUTE_SELECTED' },
       { stage: 'FINAL', outcome: 'SELECTED', reason_code: 'ROUTE_SELECTED' },
     ],
@@ -49,9 +53,17 @@ function cheapCloudDecision(): RoutingDecision {
     provider_candidate: 'deepseek',
     transition_trace: [
       { stage: 'CACHE', outcome: 'CONTINUE', reason_code: 'CACHE_MISS' },
-      { stage: 'DETERMINISTIC', outcome: 'CONTINUE', reason_code: 'DETERMINISTIC_UNRESOLVED' },
+      {
+        stage: 'DETERMINISTIC',
+        outcome: 'CONTINUE',
+        reason_code: 'DETERMINISTIC_UNRESOLVED',
+      },
       { stage: 'LOCAL', outcome: 'SKIPPED', reason_code: 'LOCAL_UNAVAILABLE' },
-      { stage: 'CHEAP_CLOUD', outcome: 'SELECTED', reason_code: 'ROUTE_SELECTED' },
+      {
+        stage: 'CHEAP_CLOUD',
+        outcome: 'SELECTED',
+        reason_code: 'ROUTE_SELECTED',
+      },
       { stage: 'FINAL', outcome: 'SELECTED', reason_code: 'ROUTE_SELECTED' },
     ],
     reason_summary: 'Selected CHEAP_CLOUD route.',
@@ -66,7 +78,11 @@ function stopDecision(): RoutingDecision {
     provider_candidate: null,
     transition_trace: [
       { stage: 'CACHE', outcome: 'CONTINUE', reason_code: 'CACHE_MISS' },
-      { stage: 'FINAL', outcome: 'DENIED', reason_code: 'NO_PROVIDER_AVAILABLE' },
+      {
+        stage: 'FINAL',
+        outcome: 'DENIED',
+        reason_code: 'NO_PROVIDER_AVAILABLE',
+      },
     ],
     reason_summary: 'No provider available.',
   } as RoutingDecision;
@@ -82,9 +98,7 @@ function createFakeRouter(decision: RoutingDecision) {
 
 function createFakeCoordinator(result: CoordinatorResult) {
   return {
-    execute: vi
-      .fn<ExecutionCoordinator['execute']>()
-      .mockResolvedValue(result),
+    execute: vi.fn<ExecutionCoordinator['execute']>().mockResolvedValue(result),
   } satisfies CoordinatorShape;
 }
 
@@ -140,7 +154,10 @@ describe('AiExecutor', () => {
 
     await executor.execute(routingRequest, routingContext, invokeParams);
 
-    expect(router.evaluate).toHaveBeenCalledWith(routingRequest, routingContext);
+    expect(router.evaluate).toHaveBeenCalledWith(
+      routingRequest,
+      routingContext,
+    );
   });
 
   it('3. router produces CHEAP_CLOUD → coordinator called with cheap-cloud route', async () => {
@@ -281,7 +298,11 @@ describe('AiExecutor', () => {
       cheapCloudAdapter: fakeCheapCloudAdapter,
     });
 
-    const result = await executor.execute(routingRequest, routingContext, invokeParams);
+    const result = await executor.execute(
+      routingRequest,
+      routingContext,
+      invokeParams,
+    );
 
     expect(coordinator.execute).not.toHaveBeenCalled();
     expect((result as RoutingDecision).decision).toBe('STOP');
@@ -301,7 +322,11 @@ describe('AiExecutor', () => {
       cheapCloudAdapter: fakeCheapCloudAdapter,
     });
 
-    const result = await executor.execute(routingRequest, routingContext, invokeParams);
+    const result = await executor.execute(
+      routingRequest,
+      routingContext,
+      invokeParams,
+    );
 
     expect(coordinator.execute).not.toHaveBeenCalled();
     expect((result as RoutingDecision).decision).toBe('STRONG');
@@ -310,7 +335,12 @@ describe('AiExecutor', () => {
   it('10. coordinator LOCAL success result is returned unchanged', async () => {
     const coordinatorResult: CoordinatorResult = {
       status: 'success',
-      result: { text: 'exact-local', inputTokens: 5, outputTokens: 6, latencyMs: 20 },
+      result: {
+        text: 'exact-local',
+        inputTokens: 5,
+        outputTokens: 6,
+        latencyMs: 20,
+      },
     };
     const router = createFakeRouter(localDecision());
     const coordinator = createFakeCoordinator(coordinatorResult);
@@ -321,7 +351,11 @@ describe('AiExecutor', () => {
       cheapCloudAdapter: fakeCheapCloudAdapter,
     });
 
-    const result = await executor.execute(routingRequest, routingContext, invokeParams);
+    const result = await executor.execute(
+      routingRequest,
+      routingContext,
+      invokeParams,
+    );
 
     expect(result).toEqual(coordinatorResult);
   });
@@ -329,7 +363,12 @@ describe('AiExecutor', () => {
   it('11. coordinator CHEAP_CLOUD success result is returned unchanged', async () => {
     const coordinatorResult: CoordinatorResult = {
       status: 'success',
-      result: { text: 'exact-cloud', inputTokens: 7, outputTokens: 8, latencyMs: 30 },
+      result: {
+        text: 'exact-cloud',
+        inputTokens: 7,
+        outputTokens: 8,
+        latencyMs: 30,
+      },
     };
     const router = createFakeRouter(cheapCloudDecision());
     const coordinator = createFakeCoordinator(coordinatorResult);
@@ -340,7 +379,11 @@ describe('AiExecutor', () => {
       cheapCloudAdapter: fakeCheapCloudAdapter,
     });
 
-    const result = await executor.execute(routingRequest, routingContext, invokeParams);
+    const result = await executor.execute(
+      routingRequest,
+      routingContext,
+      invokeParams,
+    );
 
     expect(result).toEqual(coordinatorResult);
   });
@@ -360,7 +403,11 @@ describe('AiExecutor', () => {
       cheapCloudAdapter: fakeCheapCloudAdapter,
     });
 
-    const result = await executor.execute(routingRequest, routingContext, invokeParams);
+    const result = await executor.execute(
+      routingRequest,
+      routingContext,
+      invokeParams,
+    );
 
     expect(result).toEqual(coordinatorResult);
     expect(coordinator.execute).toHaveBeenCalledOnce();
@@ -381,7 +428,11 @@ describe('AiExecutor', () => {
       cheapCloudAdapter: fakeCheapCloudAdapter,
     });
 
-    const result = await executor.execute(routingRequest, routingContext, invokeParams);
+    const result = await executor.execute(
+      routingRequest,
+      routingContext,
+      invokeParams,
+    );
 
     if ('status' in result) {
       expect(result.status).toBe('failed');
@@ -404,7 +455,11 @@ describe('AiExecutor', () => {
       cheapCloudAdapter: fakeCheapCloudAdapter,
     });
 
-    const result = await executor.execute(routingRequest, routingContext, invokeParams);
+    const result = await executor.execute(
+      routingRequest,
+      routingContext,
+      invokeParams,
+    );
 
     if ('status' in result) {
       expect(result.status).toBe('failed');
@@ -431,7 +486,11 @@ describe('AiExecutor', () => {
       cheapCloudAdapter: fakeCheapCloudAdapter,
     });
 
-    const result = await executor.execute(routingRequest, routingContext, invokeParams);
+    const result = await executor.execute(
+      routingRequest,
+      routingContext,
+      invokeParams,
+    );
 
     expect(coordinator.execute).not.toHaveBeenCalled();
     expect((result as RoutingDecision).decision).toBe('DETERMINISTIC');
@@ -455,7 +514,11 @@ describe('AiExecutor', () => {
       cheapCloudAdapter: fakeCheapCloudAdapter,
     });
 
-    const result = await executor.execute(routingRequest, routingContext, invokeParams);
+    const result = await executor.execute(
+      routingRequest,
+      routingContext,
+      invokeParams,
+    );
 
     expect(coordinator.execute).not.toHaveBeenCalled();
     expect((result as RoutingDecision).decision).toBe('CACHE');
