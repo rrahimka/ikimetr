@@ -42,7 +42,7 @@ Verified against AGENTS.md §2:
 - Secrets sourced only from environment (`.env` is untracked); never logged or
   committed. The earlier `getApiStartupErrorMessage` change that leaked a
   `redis://user:secret@…` URL was caught by the security test and reverted;
-  startup errors now print a generic message plus a non-sensitive error *code*.
+  startup errors now print a generic message plus a non-sensitive error _code_.
 
 ## 4. Database
 
@@ -61,20 +61,20 @@ Verified against AGENTS.md §2:
 
 ## 5. Security findings & fixes
 
-| # | Area | Finding | Action |
-|---|------|---------|--------|
-| S1 | CORS | No CORS policy configured at all (no `@fastify/cors`). Any origin could call the API. | Added an allowlist hook (`API_CORS_ORIGINS`, comma-separated). Unconfigured → no `Access-Control-Allow-Origin` (safe default). `OPTIONS` → 204. No new dependency. |
-| S2 | HTTP headers | No `X-Content-Type-Options` / `X-Frame-Options` / `Referrer-Policy` / CSP. | Added security-headers hook (`nosniff`, `DENY`, `no-referrer`, `default-src 'none'; frame-ancestors 'none'`). |
-| S3 | Payment provider | `createPaymentProvider` already rejected `test` in production — good. | Added regression test (prod + `PAYMENT_PROVIDER=test` → 500). |
-| S4 | Session auth | Sessions use scrypt + `timingSafeEqual`, SHA-256 token hash, revoked/expired/unknown/malformed all rejected. | Verified by 25-test security suite; no code change needed. |
-| S5 | IDOR | Property/request/conversation/notification access enforced by ownership (`canEditProperty`/`canManageAgency`). | Verified: cross-user access → 403/404. |
-| S6 | RBAC | Normal user and agency owner denied admin routes; `role` field on profile is ignored by the backend. | Verified by security suite. |
-| S7 | Ingestion auth | Endpoint disabled when `INGESTION_SERVICE_TOKEN` absent; constant-time compare. | Verified: no-token/wrong-token → 401, valid → 2xx, disabled → 401. |
-| S8 | Webhook | HMAC verified server-side (no outbound call); idempotent via `ON CONFLICT`; amount mismatch rejected. | Verified: bad sig → 400, replay → no double grant, ledger invariant 2 rows. |
-| S9 | SQL injection | Search uses a fixed `sortSpec` switch + parameterized queries; admin uses internal allowlist constants. | Verified by code review + tests. |
-| S10 | Dev/docs leak | No `swagger`/`openapi`/`/docs` route registered. | Confirmed absent. |
-| S11 | SSRF | Ingestion only *parses* source URLs (no server-side fetch). Payment webhook verifies HMAC locally. | Low risk; AI-cost external calls are isolated/optional and out of V1 runtime. |
-| S12 | Startup secrecy | Startup error message could echo secrets. | Reverted to generic; safe error code logged. |
+| #   | Area             | Finding                                                                                                        | Action                                                                                                                                                             |
+| --- | ---------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| S1  | CORS             | No CORS policy configured at all (no `@fastify/cors`). Any origin could call the API.                          | Added an allowlist hook (`API_CORS_ORIGINS`, comma-separated). Unconfigured → no `Access-Control-Allow-Origin` (safe default). `OPTIONS` → 204. No new dependency. |
+| S2  | HTTP headers     | No `X-Content-Type-Options` / `X-Frame-Options` / `Referrer-Policy` / CSP.                                     | Added security-headers hook (`nosniff`, `DENY`, `no-referrer`, `default-src 'none'; frame-ancestors 'none'`).                                                      |
+| S3  | Payment provider | `createPaymentProvider` already rejected `test` in production — good.                                          | Added regression test (prod + `PAYMENT_PROVIDER=test` → 500).                                                                                                      |
+| S4  | Session auth     | Sessions use scrypt + `timingSafeEqual`, SHA-256 token hash, revoked/expired/unknown/malformed all rejected.   | Verified by 25-test security suite; no code change needed.                                                                                                         |
+| S5  | IDOR             | Property/request/conversation/notification access enforced by ownership (`canEditProperty`/`canManageAgency`). | Verified: cross-user access → 403/404.                                                                                                                             |
+| S6  | RBAC             | Normal user and agency owner denied admin routes; `role` field on profile is ignored by the backend.           | Verified by security suite.                                                                                                                                        |
+| S7  | Ingestion auth   | Endpoint disabled when `INGESTION_SERVICE_TOKEN` absent; constant-time compare.                                | Verified: no-token/wrong-token → 401, valid → 2xx, disabled → 401.                                                                                                 |
+| S8  | Webhook          | HMAC verified server-side (no outbound call); idempotent via `ON CONFLICT`; amount mismatch rejected.          | Verified: bad sig → 400, replay → no double grant, ledger invariant 2 rows.                                                                                        |
+| S9  | SQL injection    | Search uses a fixed `sortSpec` switch + parameterized queries; admin uses internal allowlist constants.        | Verified by code review + tests.                                                                                                                                   |
+| S10 | Dev/docs leak    | No `swagger`/`openapi`/`/docs` route registered.                                                               | Confirmed absent.                                                                                                                                                  |
+| S11 | SSRF             | Ingestion only _parses_ source URLs (no server-side fetch). Payment webhook verifies HMAC locally.             | Low risk; AI-cost external calls are isolated/optional and out of V1 runtime.                                                                                      |
+| S12 | Startup secrecy  | Startup error message could echo secrets.                                                                      | Reverted to generic; safe error code logged.                                                                                                                       |
 
 ## 6. End-to-end test coverage (new)
 
@@ -102,7 +102,7 @@ Verified against AGENTS.md §2:
 - Worker consumes the `app.jobs` table and a Redis list (`JOB_QUEUE_KEY`);
   `enqueueJob` writes to both for durability.
 - Redis health is part of `/health`; forced-down Redis → `503` (verified).
-- Limitation: the Redis *queue* is transient. If Redis loses its list, jobs
+- Limitation: the Redis _queue_ is transient. If Redis loses its list, jobs
   remain in `app.jobs` (`status='queued'`) but need re-enqueue reconciliation.
   Not exercised here; see §10.
 
@@ -110,7 +110,7 @@ Verified against AGENTS.md §2:
 
 Decision: the checkout **intent** row and the webhook **event** row are
 semantically distinct (intent = attempted checkout; event = settled payout)
-and must both remain. The *redundant* `${event.id}:applied` row was removed.
+and must both remain. The _redundant_ `${event.id}:applied` row was removed.
 Post-webhook invariant: exactly **2** payment rows per checkout, no `:applied`
 row; verified by the webhook security test (dedup → no double grant, amount
 mismatch rejected).

@@ -18,7 +18,7 @@ changed files, `git diff --check`.
 
 ## Issue 1 — Business mutation + job row are not atomic
 
-**Root cause.** The durable `app.jobs` row was created by a *separate* DB
+**Root cause.** The durable `app.jobs` row was created by a _separate_ DB
 transaction opened inside `createJobEnqueue`, after the business mutation had
 already committed. Two windows existed:
 
@@ -26,7 +26,7 @@ already committed. Two windows existed:
   notification job was permanently lost (the worker reconciler cannot recover a
   row that was never written).
 - billing webhook opened an outer payment transaction, then `enqueueJob` opened a
-  *second* transaction to insert the job row and committed it *before* the outer
+  _second_ transaction to insert the job row and committed it _before_ the outer
   transaction. If the outer transaction later rolled back, the worker could
   process a job for a business event that never committed.
 
@@ -82,7 +82,7 @@ project's actual Redis client (`apps/api/src/redis.ts`) with
 **Trust model (Option A chosen).** Fastify is now configured with
 `trustProxy` driven by `API_TRUSTED_PROXIES` (comma-separated CIDR/IP list) in
 `apps/api/src/environment.ts` + `server.ts`. When set, Fastify derives the real
-client IP from a *trusted* `X-Forwarded-For` hop, so the limiter keys on the
+client IP from a _trusted_ `X-Forwarded-For` hop, so the limiter keys on the
 client, not the proxy. When unset (no trusted proxy in front), `request.ip` is
 the direct socket peer and `X-Forwarded-For` is ignored — so a spoofed header
 cannot bypass the limiter. The limiter itself never reads `X-Forwarded-For`

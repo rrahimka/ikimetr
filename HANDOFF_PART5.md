@@ -6,6 +6,7 @@
 ## Recorded review items (carry into PART 5)
 
 ### P5-REVIEW-1: Payment ledger row semantics (checkout pending row vs webhook event row)
+
 - Observation: `POST /api/v1/billing/checkout` inserts a `payments` row with
   `status = 'pending'` and `provider_event_id = NULL` for a given
   `provider_payment_id` (say `X`). The later `payment.succeeded` webhook then
@@ -29,4 +30,5 @@
   `packages/database/migrations/1786494400000_billing_core.ts` (`payments`).
 
 ## Gates to repeat for PART 5
+
 lint · typecheck · unit · integration · `db:migrate:verify` · prettier(changed) · build · `audit:prod` · `git diff --check` (mirrors PART 4B).

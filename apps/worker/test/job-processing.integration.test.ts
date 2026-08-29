@@ -279,7 +279,11 @@ describe('worker job processing', () => {
     // 'completed'. We claim the job, run the handler inside its own committed
     // transaction, then leave the job as 'processing'.
     const claimed = await connection.transaction((tx) =>
-      tx.query<{ id: string; payload: unknown; idempotency_key: string | null }>(
+      tx.query<{
+        id: string;
+        payload: unknown;
+        idempotency_key: string | null;
+      }>(
         `UPDATE app.jobs
          SET status = 'processing'
          WHERE id = $1

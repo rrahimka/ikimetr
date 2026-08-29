@@ -11,6 +11,7 @@ migrations (`1786492900000_identity_foundation`, `1786492910000_realtor_agency`,
 `1786492920000_property_core`).
 
 ### Authentication (custom, no new dependencies)
+
 - `identity/password.ts` — password hashing with Node `crypto.scrypt` (per-password salt).
 - `identity/session.ts` — 32-byte session tokens (`generateSessionToken`) + `sha256`
   token storage (`hashSessionToken`); `normalizeEmail`; `slugify`.
@@ -18,11 +19,13 @@ migrations (`1786492900000_identity_foundation`, `1786492910000_realtor_agency`,
   `request.user` (server-side, DB-backed, revocable sessions).
 
 ### Authorization (server-side, never client-derived)
+
 - `authz.ts` — `canManageAgency(membership, minimumRole)` and
   `canEditProperty(property, userId, membership)`. Ownership is always read from the
   database row, never the request body.
 
 ### Domain services
+
 - `identity/service.ts` — register, login, session create/revoke/resolve, profile
   read/update, realtor read/ensure/update, agency create/read/update, membership
   add/list with role + status enforcement.
@@ -31,6 +34,7 @@ migrations (`1786492900000_identity_foundation`, `1786492910000_realtor_agency`,
   image add/list.
 
 ### HTTP layer
+
 - `routes.ts` — `registerRoutes`:
   - `POST /api/v1/auth/register`, `POST /api/v1/auth/login`,
     `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`
@@ -51,6 +55,7 @@ migrations (`1786492900000_identity_foundation`, `1786492910000_realtor_agency`,
 - `schemas.ts` — zod DTOs (re-export `z` from `@ikimetr/validation`).
 
 ## Security evidence (integration tests)
+
 - `apps/api/test/auth.integration.test.ts`
   - strangers **cannot** read/modify an agency they don't belong to (403).
   - an added `admin` member **can** manage the agency (200).
@@ -60,6 +65,7 @@ migrations (`1786492900000_identity_foundation`, `1786492910000_realtor_agency`,
   - property status changes are recorded in `property_status_history`.
 
 ## How to run
+
 ```bash
 # start Postgres + Redis (Docker Desktop must be running)
 docker compose --env-file .env.example -f infrastructure/compose.yaml up -d --wait
@@ -75,18 +81,20 @@ pnpm test:unit               # see "Known limitations"
 ```
 
 ## Gate results
-| Gate | Result |
-|------|--------|
-| `pnpm db:migrate:verify` | PASS (4 migrations) |
-| `pnpm test:integration` | PASS (24/24) |
-| `pnpm test:unit` (relevant pkgs) | PASS (api + database) |
-| `eslint` (changed files) | PASS |
-| `tsc --noEmit` (api) | PASS |
-| `pnpm --filter @ikimetr/api build` | PASS |
-| `pnpm audit:prod` | PASS (no vulns) |
-| `prettier --check` (changed files) | PASS |
+
+| Gate                               | Result                |
+| ---------------------------------- | --------------------- |
+| `pnpm db:migrate:verify`           | PASS (4 migrations)   |
+| `pnpm test:integration`            | PASS (24/24)          |
+| `pnpm test:unit` (relevant pkgs)   | PASS (api + database) |
+| `eslint` (changed files)           | PASS                  |
+| `tsc --noEmit` (api)               | PASS                  |
+| `pnpm --filter @ikimetr/api build` | PASS                  |
+| `pnpm audit:prod`                  | PASS (no vulns)       |
+| `prettier --check` (changed files) | PASS                  |
 
 ## Known limitations (not regressions)
+
 - `pnpm test:unit` shows 3 failures in
   `packages/ai-cost-system/test/ollama-acceptance.test.ts`. These are **real-network
   acceptance tests** that require a running Ollama endpoint (`fetch failed`); they are
@@ -101,6 +109,7 @@ pnpm test:unit               # see "Known limitations"
   because PART 2 legitimately adds 3 migrations and the corresponding tables.
 
 ## Next steps (PART 3+)
+
 - Rate limiting / brute-force protection on `/auth/login` and `/auth/register`.
 - Email verification & password reset flows.
 - Public property search/listing endpoints (read model) with the visibility rules
