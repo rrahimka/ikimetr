@@ -15,5 +15,10 @@
     "@ikimetr/validation": "workspace:*",
     "fastify": "5.11.3",
     "redis": "6.2.0"
+  },
+  "devDependencies": {
+    "@types/pg": "8.21.0",
+    "node-pg-migrate": "9.0.0",
+    "pg": "8.22.0"
   }
 }

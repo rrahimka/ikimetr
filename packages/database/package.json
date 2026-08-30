@@ -11,12 +11,17 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "db:migrate:create": "node-pg-migrate create --config-file migration.config.json",
+    "db:migrate:down:local": "node --import tsx migration/assert-local.ts && pnpm run db:migrate:verify && node-pg-migrate down 1 --config-file migration.config.json --single-transaction --lock --advisory-lock-mode fail",
+    "db:migrate:up": "pnpm run db:migrate:verify && node-pg-migrate up --config-file migration.config.json --single-transaction --lock --advisory-lock-mode fail",
+    "db:migrate:verify": "node --import tsx migration/verify-manifest.ts",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "pg": "8.22.0"
   },
   "devDependencies": {
-    "@types/pg": "8.21.0"
+    "@types/pg": "8.21.0",
+    "node-pg-migrate": "9.0.0"
   }
 }

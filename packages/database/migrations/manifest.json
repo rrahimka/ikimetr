@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "migrations": [
+    {
+      "path": "packages/database/migrations/1786492800000_foundation.ts",
+      "sha256": "720dfd1145ab989974d426469aadd4eae84e2fb4e72a10bdf0b4bcd9b58f66fc"
+    },
+    {
+      "path": "packages/database/migrations/1786492900000_identity_foundation.ts",
+      "sha256": "3f47035856c545e6a41ef30a7a636040463d2637882d36cce441f412b9599c0c"
+    },
+    {
+      "path": "packages/database/migrations/1786492910000_realtor_agency.ts",
+      "sha256": "187ee13c8e14b03d2b8522a1924785198a47bbf889e6e46a32905f15930b9749"
+    },
+    {
+      "path": "packages/database/migrations/1786492920000_property_core.ts",
+      "sha256": "ef1a0c7d84cdb151ef345efd1a3d1ce70ec4c28bd37212ec08d3947aa2019b22"
+    },
+    {
+      "path": "packages/database/migrations/1786492930000_marketplace_listings.ts",
+      "sha256": "1abc4602df42dd8d23360c331c2e56d715d20e477502e0b7f4601990e4c7d4e1"
+    },
+    {
+      "path": "packages/database/migrations/1786492940000_client_requests.ts",
+      "sha256": "bf8835b939d740cd7ba99bed1be45f992cfa4997edd38c09d13a57bcc7e0b613"
+    },
+    {
+      "path": "packages/database/migrations/1786492950000_listings_title.ts",
+      "sha256": "2c16d8bf8bac9b75d2a78b06ecb1d0f557d9e36344f6a3c22bd1d93667005326"
+    },
+    {
+      "path": "packages/database/migrations/1786492960000_phone_hash_width.ts",
+      "sha256": "6ebf24991f370d798de5979a19ef8ed5139e4ae10964ae1533790f608c02865e"
+    },
+    {
+      "path": "packages/database/migrations/1786494100000_messaging.ts",
+      "sha256": "42971ce963d3c7a7d9491670f14ee3cbb6ef32261e619fe5f8059acc7b989c2a"
+    },
+    {
+      "path": "packages/database/migrations/1786494200000_notifications.ts",
+      "sha256": "7b4fb8030de6ce6960f4aa14476394f6209a6165bf480a11a3297f5fba651637"
+    },
+    {
+      "path": "packages/database/migrations/1786494300000_jobs.ts",
+      "sha256": "b62d1707595bdb9e2bc6b6b06de82b4601f9efe3a0bbb83b10de6a5392d844cf"
+    },
+    {
+      "path": "packages/database/migrations/1786494400000_billing_core.ts",
+      "sha256": "ec9e57fdaf4bbed68d048fa8d4b4675be70443586fba33df914f857900e1536b"
+    },
+    {
+      "path": "packages/database/migrations/1786494500000_audit_log.ts",
+      "sha256": "5a8d8ffa5540f1cc95412e8210476b08bf9d79e22487a51bf4d1e69a08658598"
+    },
+    {
+      "path": "packages/database/migrations/1786494600000_seed_plans.ts",
+      "sha256": "a80276d9bee5cd3f9a687780b789545779b4356a74773920aa1b8a45f9bc8aa6"
+    },
+    {
+      "path": "packages/database/migrations/1786494700000_conversation_direct_pair.ts",
+      "sha256": "9d8b299c9d239f6cea33cb8ffeaac0d72efc396d8e275f269de3693ed034ce55"
+    }
+  ]
+}

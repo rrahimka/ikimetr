@@ -1,0 +1,12 @@
+{
+  "dir": "migrations",
+  "migrations-schema": "migration",
+  "create-migrations-schema": true,
+  "migrations-table": "pgmigrations",
+  "migration-file-language": "ts",
+  "migration-filename-format": "timestamp",
+  "check-order": true,
+  "ignore-pattern": "manifest\\.json",
+  "verbose": false,
+  "advisory-lock-mode": "fail"
+}

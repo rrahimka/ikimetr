@@ -8,7 +8,9 @@ import {
   getApiStartupErrorMessage,
   loadApiEnvironment,
 } from './environment.js';
-import { createRedisHealthConnection } from './redis.js';
+import { createRedisHealthConnection, createRedisClient } from './redis.js';
+import { createPaymentProvider } from './billing/provider.js';
+import { createOutbox } from './queue/outbox.js';
 
 function loadLocalEnvironment(): void {
   if (existsSync('.env')) {
@@ -21,10 +23,33 @@ async function startApi(): Promise<void> {
   const environment = loadApiEnvironment();
   const database = createDatabaseConnection(environment.DATABASE_URL);
   const redis = createRedisHealthConnection(environment.REDIS_URL);
-  const app = buildApp({ database, redis }, { logger: true });
+  const rateLimitRedis = createRedisClient(environment.REDIS_URL);
+  const outbox = createOutbox(redis);
+  const paymentProvider = createPaymentProvider(environment);
+  const trustedProxies = environment.API_TRUSTED_PROXIES
+    ? environment.API_TRUSTED_PROXIES.split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+    : undefined;
+  const app = buildApp(
+    {
+      database,
+      redis,
+      connection: database,
+      outbox,
+      paymentProvider,
+      rateLimitRedis,
+      ...(trustedProxies ? { trustedProxies } : {}),
+    },
+    { logger: true },
+  );
 
   app.addHook('onClose', async () => {
-    await Promise.allSettled([database.close(), redis.close()]);
+    await Promise.allSettled([
+      database.close(),
+      redis.close(),
+      rateLimitRedis.destroy(),
+    ]);
   });
 
   try {
@@ -48,7 +73,15 @@ async function startApi(): Promise<void> {
     }
 
     closing = true;
-    await app.close();
+    process.stderr.write('SHUTDOWN: received signal, closing app\n');
+    try {
+      await app.close();
+      process.stderr.write('SHUTDOWN: app closed, exiting 0\n');
+      process.exit(0);
+    } catch (error) {
+      process.stderr.write(`SHUTDOWN: close error ${String(error)}\n`);
+      process.exit(1);
+    }
   };
 
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
@@ -62,5 +95,12 @@ async function startApi(): Promise<void> {
 
 startApi().catch((error: unknown) => {
   console.error(getApiStartupErrorMessage(error));
+  const code =
+    error instanceof Error
+      ? (error as Error & { code?: string }).code
+      : undefined;
+  if (code) {
+    console.error(`Startup error code: ${code}`);
+  }
   process.exitCode = 1;
 });

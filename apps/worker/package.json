@@ -10,7 +10,14 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@ikimetr/database": "workspace:*",
+    "@ikimetr/shared": "workspace:*",
     "@ikimetr/validation": "workspace:*",
     "redis": "6.2.0"
+  },
+  "devDependencies": {
+    "@types/pg": "8.21.0",
+    "node-pg-migrate": "9.0.0",
+    "pg": "8.22.0"
   }
 }

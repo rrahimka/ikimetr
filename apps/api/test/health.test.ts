@@ -1,12 +1,37 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+import Fastify, { type FastifyInstance } from 'fastify';
 
-import { buildApp } from '../src/app.js';
+import { registerHealthRoute } from '../src/health.js';
 import { getApiStartupErrorMessage } from '../src/environment.js';
 
-const apps: Array<ReturnType<typeof buildApp>> = [];
+const databaseCheck = vi.fn<() => Promise<void>>();
+const redisCheck = vi.fn<() => Promise<void>>();
+let app: FastifyInstance;
 
-afterEach(async () => {
-  await Promise.all(apps.splice(0).map((app) => app.close()));
+beforeAll(async () => {
+  app = Fastify();
+  registerHealthRoute(app, {
+    database: { check: databaseCheck },
+    redis: { check: redisCheck },
+  });
+  await app.ready();
+}, 30_000);
+
+beforeEach(() => {
+  databaseCheck.mockReset().mockResolvedValue(undefined);
+  redisCheck.mockReset().mockResolvedValue(undefined);
+});
+
+afterAll(async () => {
+  await app.close();
 });
 
 describe('GET /health', () => {
@@ -14,16 +39,12 @@ describe('GET /health', () => {
     'returns 200 when all dependencies are healthy',
     { timeout: 10_000 },
     async () => {
-      const app = buildApp({
-        database: { check: vi.fn().mockResolvedValue(undefined) },
-        redis: { check: vi.fn().mockResolvedValue(undefined) },
-      });
-      apps.push(app);
-
       const response = await app.inject({ method: 'GET', url: '/health' });
 
       expect(response.statusCode).toBe(200);
       expect(response.json()).toEqual({ status: 'ok' });
+      expect(databaseCheck).toHaveBeenCalledOnce();
+      expect(redisCheck).toHaveBeenCalledOnce();
     },
   );
 
@@ -33,21 +54,11 @@ describe('GET /health', () => {
       const secretError = new Error(
         'connection failed for postgresql://user:secret@private-host/db',
       );
-      const app = buildApp({
-        database: {
-          check:
-            unavailableDependency === 'database'
-              ? vi.fn().mockRejectedValue(secretError)
-              : vi.fn().mockResolvedValue(undefined),
-        },
-        redis: {
-          check:
-            unavailableDependency === 'redis'
-              ? vi.fn().mockRejectedValue(secretError)
-              : vi.fn().mockResolvedValue(undefined),
-        },
-      });
-      apps.push(app);
+      if (unavailableDependency === 'database') {
+        databaseCheck.mockRejectedValue(secretError);
+      } else {
+        redisCheck.mockRejectedValue(secretError);
+      }
 
       const response = await app.inject({ method: 'GET', url: '/health' });
 

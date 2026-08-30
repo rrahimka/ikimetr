@@ -42,20 +42,26 @@ import {
 const MODEL = 'qwen2.5-coder:7b';
 const DIGEST =
   'dae161e27b0e90dd1856c8bb3209201fd6736d8eb66298e75ed87571486f4364';
-const OLLAMA_VERSION_URL = 'http://127.0.0.1:11434/api/version';
 
+const OLLAMA_BASE_URL =
+  process.env['OLLAMA_BASE_URL'] ?? 'http://127.0.0.1:11434';
+
+// Ollama is an OPTIONAL/external acceptance dependency. It is not used by any
+// İkiMetr V1 production runtime flow (no app imports @ikimetr/ai-cost-system),
+// so its absence must not turn the core release red. The suite still runs when
+// a reachable Ollama endpoint is present.
 async function isOllamaReachable(): Promise<boolean> {
   try {
-    await fetch(OLLAMA_VERSION_URL, {
+    const response = await fetch(`${OLLAMA_BASE_URL}/api/version`, {
       signal: AbortSignal.timeout(1_000),
     });
-    return true;
+    return response.ok;
   } catch {
     return false;
   }
 }
 
-const ollamaReachable = await isOllamaReachable();
+const ollamaAvailable = await isOllamaReachable();
 
 const fixtures: ConfigFixture[] = [];
 const temporaryDirectories: string[] = [];
@@ -184,64 +190,68 @@ const echoSchema = z
   })
   .strict();
 
-describe.skipIf(!ollamaReachable)('Ollama real acceptance test', () => {
-  it('health probe confirms model and digest', async () => {
-    const { adapter } = await createHarness();
-    const result = await adapter.health();
-    expect(result.status).toBe('healthy');
-    expect(result.model).toBe(MODEL);
-    expect(result.digest).toBe(DIGEST);
-  }, 60_000);
+describe.skipIf(!ollamaAvailable)(
+  'Ollama real acceptance test (external; skipped when Ollama unreachable)',
+  () => {
+    it('health probe confirms model and digest', async () => {
+      const { adapter } = await createHarness();
+      const result = await adapter.health();
+      expect(result.status).toBe('healthy');
+      expect(result.model).toBe(MODEL);
+      expect(result.digest).toBe(DIGEST);
+    }, 60_000);
 
-  it('invoke with simple prompt returns valid response', async () => {
-    const { adapter, ledger } = await createHarness();
-    const result = await adapter.invoke({
-      prompt: 'Return exactly this JSON and nothing else: {"echo":"hello"}',
-      temperature: 0,
-      maxTokens: 50,
-    });
-
-    expect(result.text).toContain('hello');
-    expect(result.inputTokens).toBeGreaterThan(0);
-    expect(result.outputTokens).toBeGreaterThan(0);
-    expect(result.latencyMs).toBeGreaterThan(0);
-
-    const events = await ledger.replay();
-    const reservations = events.filter(
-      (e) => e.event_type === 'BudgetReservation',
-    );
-    expect(reservations.length).toBe(1);
-
-    const settlements = events.filter(
-      (e) => e.event_type === 'BudgetSettlement' && e.disposition === 'settled',
-    );
-    expect(settlements.length).toBe(1);
-
-    const completed = events.filter(
-      (e) => e.event_type === 'AttemptCompleted' && e.status === 'completed',
-    );
-    expect(completed.length).toBe(1);
-
-    if (completed[0]?.event_type === 'AttemptCompleted') {
-      expect(completed[0].actual_cost).toEqual({
-        currency: 'USD',
-        amountMicros: 0,
+    it('invoke with simple prompt returns valid response', async () => {
+      const { adapter, ledger } = await createHarness();
+      const result = await adapter.invoke({
+        prompt: 'Return exactly this JSON and nothing else: {"echo":"hello"}',
+        temperature: 0,
+        maxTokens: 50,
       });
-    }
-  }, 60_000);
 
-  it('structured invoke validates output schema', async () => {
-    const { adapter } = await createHarness();
-    const result = await adapter.invokeStructured({
-      prompt:
-        'Return exactly this JSON and nothing else: {"echo":"structured-test"}',
-      schema: echoSchema,
-      temperature: 0,
-      maxTokens: 50,
-    });
+      expect(result.text).toContain('hello');
+      expect(result.inputTokens).toBeGreaterThan(0);
+      expect(result.outputTokens).toBeGreaterThan(0);
+      expect(result.latencyMs).toBeGreaterThan(0);
 
-    expect(result.parsed).toEqual({ echo: 'structured-test' });
-    expect(result.inputTokens).toBeGreaterThan(0);
-    expect(result.outputTokens).toBeGreaterThan(0);
-  }, 60_000);
-});
+      const events = await ledger.replay();
+      const reservations = events.filter(
+        (e) => e.event_type === 'BudgetReservation',
+      );
+      expect(reservations.length).toBe(1);
+
+      const settlements = events.filter(
+        (e) =>
+          e.event_type === 'BudgetSettlement' && e.disposition === 'settled',
+      );
+      expect(settlements.length).toBe(1);
+
+      const completed = events.filter(
+        (e) => e.event_type === 'AttemptCompleted' && e.status === 'completed',
+      );
+      expect(completed.length).toBe(1);
+
+      if (completed[0]?.event_type === 'AttemptCompleted') {
+        expect(completed[0].actual_cost).toEqual({
+          currency: 'USD',
+          amountMicros: 0,
+        });
+      }
+    }, 60_000);
+
+    it('structured invoke validates output schema', async () => {
+      const { adapter } = await createHarness();
+      const result = await adapter.invokeStructured({
+        prompt:
+          'Return exactly this JSON and nothing else: {"echo":"structured-test"}',
+        schema: echoSchema,
+        temperature: 0,
+        maxTokens: 50,
+      });
+
+      expect(result.parsed).toEqual({ echo: 'structured-test' });
+      expect(result.inputTokens).toBeGreaterThan(0);
+      expect(result.outputTokens).toBeGreaterThan(0);
+    }, 60_000);
+  },
+);
