@@ -240,8 +240,12 @@ async function insertExternalListing(
   listingId: string,
   input: ListingInput,
   dedupStatus: 'new' | 'duplicate' | 'merged',
-): Promise<{ id: string; inserted: boolean }> {
-  const result = await tx.query<{ id: string; inserted: boolean }>(
+): Promise<{ id: string; listingId: string; inserted: boolean }> {
+  const result = await tx.query<{
+    id: string;
+    listing_id: string;
+    inserted: boolean;
+  }>(
     `INSERT INTO app.external_listings (
        listing_id, source, external_id, source_url, seller_type, phone_hash,
        raw_payload, normalized_payload, source_status, dedup_status,
@@ -257,7 +261,7 @@ async function insertExternalListing(
        dedup_status = EXCLUDED.dedup_status,
        last_seen_at = now(),
        ingested_at = now()
-     RETURNING id, (xmax = 0) AS inserted`,
+     RETURNING id, listing_id, (xmax = 0) AS inserted`,
     [
       listingId,
       input.source,
@@ -276,7 +280,11 @@ async function insertExternalListing(
   if (!row) {
     throw new Error('failed to create external listing');
   }
-  return { id: row.id, inserted: row.inserted };
+  return {
+    id: row.id,
+    listingId: row.listing_id,
+    inserted: row.inserted,
+  };
 }
 
 async function getExternalListing(
@@ -394,6 +402,10 @@ export async function ingestListing(
       if (created.inserted) {
         action = createdNewListing ? 'created' : 'linked';
       } else {
+        if (createdNewListing && created.listingId !== listingId) {
+          await tx.query('DELETE FROM app.listings WHERE id = $1', [listingId]);
+        }
+        listingId = created.listingId;
         await updateExternalListing(tx, created.id, input);
         action = 'updated';
         isDuplicate = true;

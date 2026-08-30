@@ -1,4 +1,10 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import type { QueryResultRow } from 'pg';
+
+import type {
+  DatabaseConnection,
+  DatabaseTransaction,
+} from '@ikimetr/database';
 
 import {
   setupTestContext,
@@ -6,6 +12,8 @@ import {
   truncateDatabase,
   type TestContext,
 } from './helpers.js';
+import { ingestionPayloadSchema } from '../src/ingestion/contract.js';
+import { ingestListing } from '../src/ingestion/service.js';
 
 let ctx: TestContext;
 const SERVICE_TOKEN = 'test-ingestion-secret-123456';
@@ -64,6 +72,38 @@ async function countListings(): Promise<number> {
     tx.query('SELECT count(*)::int AS c FROM app.listings'),
   );
   return Number(r.rows[0]?.c ?? 0);
+}
+
+function gateExternalInserts(
+  connection: DatabaseConnection,
+): DatabaseConnection {
+  let arrivals = 0;
+  let release: () => void = () => undefined;
+  const bothReady = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  return {
+    check: () => connection.check(),
+    close: () => connection.close(),
+    transaction: <T>(work: (transaction: DatabaseTransaction) => Promise<T>) =>
+      connection.transaction(async (transaction) => {
+        const gatedTransaction: DatabaseTransaction = {
+          async query<Row extends QueryResultRow = QueryResultRow>(
+            text: string,
+            values?: readonly unknown[],
+          ) {
+            if (text.includes('INSERT INTO app.external_listings')) {
+              arrivals += 1;
+              if (arrivals === 2) release();
+              await bothReady;
+            }
+            return transaction.query<Row>(text, values);
+          },
+        };
+        return work(gatedTransaction);
+      }),
+  };
 }
 
 async function listingPrice(externalId: string): Promise<number | null> {
@@ -144,13 +184,16 @@ describe('ingestion pipeline', () => {
     expect(await listingPrice('B123')).toBe(270000);
   });
 
-  it('does not duplicate on concurrent identical ingestion', async () => {
-    const [a, b] = await Promise.all([
-      ingest(basePayload()),
-      ingest(basePayload()),
+  it('does not leave orphan canonical listings under concurrent identical ingestion', async () => {
+    const payload = ingestionPayloadSchema.parse(basePayload());
+    const connection = gateExternalInserts(ctx.connection);
+
+    const [first, second] = await Promise.all([
+      ingestListing(connection, payload),
+      ingestListing(connection, payload),
     ]);
-    expect(a.statusCode).toBe(201);
-    expect(b.statusCode).toBe(201);
+
+    expect(first.listingId).toBe(second.listingId);
     expect(await countExternal()).toBe(1);
     expect(await countListings()).toBe(1);
   });
